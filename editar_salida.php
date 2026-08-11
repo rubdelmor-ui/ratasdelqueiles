@@ -239,11 +239,11 @@ if (!$fila) {
             </div>
             <div>
                 <label class="label-dark">Imagen actual</label>
-                <?php if (!empty($fila['imagen']) && file_exists('images/salidas/' . $fila['imagen'])): ?>
-                    <img src="images/salidas/<?php echo $fila['imagen']; ?>" class="imagen-actual" alt="Imagen actual">
-                    <p class="text-secondary text-sm mt-1"><?php echo $fila['imagen']; ?></p>
+                <?php if (!empty($fila['imagen']) && strpos($fila['imagen'], 'http') === 0): ?>
+                    <img src="<?php echo $fila['imagen']; ?>" class="imagen-actual" alt="Imagen actual">
+                    <p class="text-secondary text-sm mt-1">Guardada en la nube</p>
                 <?php else: ?>
-                    <p class="text-secondary text-sm">No hay imagen asociada.</p>
+                    <p class="text-secondary text-sm">No hay imagen en la nube.</p>
                 <?php endif; ?>
             </div>
             <div>

@@ -28,10 +28,31 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $archivo = $_FILES['foto'];
                 $extension = strtolower(pathinfo($archivo['name'], PATHINFO_EXTENSION));
                 $tipos_permitidos = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+                
                 if (in_array($extension, $tipos_permitidos)) {
-                    $nombre_foto = date('Ymd_His') . '_' . uniqid() . '.' . $extension;
-                    $ruta_destino = 'uploads/perfiles/' . $nombre_foto;
-                    move_uploaded_file($archivo['tmp_name'], $ruta_destino);
+                    // --- CLOUDINARY UPLOAD ---
+                    $cloud_name = getenv('CLOUDINARY_CLOUD_NAME');
+                    $api_key = getenv('CLOUDINARY_API_KEY');
+                    $api_secret = getenv('CLOUDINARY_API_SECRET');
+                    $timestamp = time();
+                    $signature = sha1("timestamp=" . $timestamp . $api_secret);
+
+                    $ch = curl_init("https://api.cloudinary.com/v1_1/{$cloud_name}/image/upload");
+                    $cfile = new CURLFile($archivo['tmp_name']);
+                    $data = [
+                        'file' => $cfile, 'api_key' => $api_key, 'timestamp' => $timestamp,
+                        'signature' => $signature, 'folder' => 'ratas_perfiles'
+                    ];
+                    curl_setopt($ch, CURLOPT_POST, true);
+                    curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                    $respuesta = curl_exec($ch);
+                    curl_close($ch);
+                    
+                    $json = json_decode($respuesta, true);
+                    if (isset($json['secure_url'])) {
+                        $nombre_foto = $json['secure_url']; // Guardamos la URL segura
+                    }
                 }
             }
 

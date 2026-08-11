@@ -319,10 +319,12 @@ if ($es_junta) {
         </div>
     <?php endif; ?>
 
-    <!-- IMAGEN -->
+<!-- IMAGEN -->
     <div class="recuadro-imagen">
-        <?php if (!empty($imagen_home) && file_exists('images/home/' . $imagen_home)): ?>
-            <img src="images/home/<?php echo $imagen_home; ?>" alt="Imagen de la home" class="imagen-home">
+        <?php 
+        // Como ahora es una URL absoluta, comprobamos si empieza por 'http'
+        if (!empty($imagen_home) && strpos($imagen_home, 'http') === 0): ?>
+            <img src="<?php echo $imagen_home; ?>" alt="Imagen de la home" class="imagen-home">
         <?php else: ?>
             <div class="placeholder-imagen">
                 <span class="material-symbols-outlined text-4xl">image</span>

@@ -398,23 +398,19 @@ if ($es_junta) {
                     } catch (Exception $e) { $fecha_iso = ''; }
                 }
 
-                // ---- MANEJO DE IMAGEN ----
-                $nombre_imagen = $salida['imagen'];
-                $ruta_imagen = 'images/salidas/' . $nombre_imagen;
-                $ruta_defecto = 'assets/images/fondo_moto.jpg';
-
-                $ruta_absoluta_imagen = $_SERVER['DOCUMENT_ROOT'] . '/' . $ruta_imagen;
-                $ruta_absoluta_defecto = $_SERVER['DOCUMENT_ROOT'] . '/' . $ruta_defecto;
-
-                $imagen_existe = (!empty($nombre_imagen) && file_exists($ruta_absoluta_imagen));
-                $defecto_existe = file_exists($ruta_absoluta_defecto);
-
-                $src_imagen = '';
-                if ($imagen_existe) {
-                    $src_imagen = $ruta_imagen;
-                } elseif ($defecto_existe) {
-                    $src_imagen = $ruta_defecto;
-                }
+                <!-- IMAGEN -->
+    <div class="recuadro-imagen">
+        <?php 
+        // Como ahora es una URL absoluta, comprobamos si empieza por 'http'
+        if (!empty($imagen_home) && strpos($imagen_home, 'http') === 0): ?>
+            <img src="<?php echo $imagen_home; ?>" alt="Imagen de la home" class="imagen-home">
+        <?php else: ?>
+            <div class="placeholder-imagen">
+                <span class="material-symbols-outlined text-4xl">image</span>
+                <span>No hay imagen configurada. El administrador puede subir una.</span>
+            </div>
+        <?php endif; ?>
+    </div>
                 ?>
                 <article class="surface-texture rounded-lg border border-outline-variant/30 p-4 flex flex-col sm:flex-row gap-4 hover:border-outline transition-colors group relative overflow-hidden">
                     <div class="absolute left-0 top-0 bottom-0 w-1 bg-surface-variant group-hover:bg-primary transition-colors"></div>
