@@ -346,7 +346,7 @@ if ($es_junta) {
         <div class="grid grid-cols-1 md:grid-cols-2 gap-gutter mt-2">
             <?php foreach ($todas_salidas as $salida): ?>
                 <?php
-                // Contar total de asistentes (socios + acompañantes)
+                // Contar total de asistentes
                 $count_sql = "SELECT COUNT(*) as total FROM inscripciones WHERE salida_id = " . $salida['id'];
                 $count_result = $conexion->query($count_sql);
                 $total_socios = $count_result->fetch_assoc()['total'];
@@ -398,19 +398,19 @@ if ($es_junta) {
                     } catch (Exception $e) { $fecha_iso = ''; }
                 }
 
-                <!-- IMAGEN -->
-    <div class="recuadro-imagen">
-        <?php 
-        // Como ahora es una URL absoluta, comprobamos si empieza por 'http'
-        if (!empty($imagen_home) && strpos($imagen_home, 'http') === 0): ?>
-            <img src="<?php echo $imagen_home; ?>" alt="Imagen de la home" class="imagen-home">
-        <?php else: ?>
-            <div class="placeholder-imagen">
-                <span class="material-symbols-outlined text-4xl">image</span>
-                <span>No hay imagen configurada. El administrador puede subir una.</span>
-            </div>
-        <?php endif; ?>
-    </div>
+                // ---- MANEJO DE IMAGEN CON CLOUDINARY ----
+                $nombre_imagen = $salida['imagen'];
+                $ruta_defecto = '/assets/images/fondo_moto.jpg'; // Ruta absoluta local para fallback
+
+                // Comprobar si la imagen guardada en BD es una URL de Cloudinary
+                $imagen_existe = (!empty($nombre_imagen) && strpos($nombre_imagen, 'http') === 0);
+                
+                $src_imagen = '';
+                if ($imagen_existe) {
+                    $src_imagen = $nombre_imagen; // Usamos directamente la URL
+                } else {
+                    $src_imagen = $ruta_defecto; // Usamos el fallback local
+                }
                 ?>
                 <article class="surface-texture rounded-lg border border-outline-variant/30 p-4 flex flex-col sm:flex-row gap-4 hover:border-outline transition-colors group relative overflow-hidden">
                     <div class="absolute left-0 top-0 bottom-0 w-1 bg-surface-variant group-hover:bg-primary transition-colors"></div>
@@ -427,9 +427,9 @@ if ($es_junta) {
                                 <?php if (empty($nombre_imagen)): ?>
                                     ⚠️ Sin imagen asignada
                                 <?php elseif ($imagen_existe): ?>
-                                    ✅ <?php echo $nombre_imagen; ?>
+                                    ✅ Nube
                                 <?php else: ?>
-                                    ❌ No encontrado: <?php echo $nombre_imagen; ?>
+                                    ❌ No en nube
                                 <?php endif; ?>
                             </div>
                         <?php endif; ?>
