@@ -15,3 +15,6 @@ RUN chown -R www-data:www-data /var/www/html
 
 # Exponemos el puerto 80
 EXPOSE 80
+
+# Aumentar el límite de subida a 50MB
+RUN echo "upload_max_filesize = 50M\npost_max_size = 50M" > /usr/local/etc/php/conf.d/uploads.ini
