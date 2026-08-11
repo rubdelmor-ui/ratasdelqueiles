@@ -18,6 +18,9 @@ $fila = $resultado->fetch_assoc();
 <html>
 <head>
     <title>Editar Acta</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#131313">
+    <link rel="apple-touch-icon" href="images/logo2.jpg">
     <style>
         body { font-family: Arial; background: #f0f0f0; padding: 20px; }
         .contenedor { max-width: 600px; background: white; padding: 30px; margin: 0 auto; border-radius: 10px; box-shadow: 0 0 15px rgba(0,0,0,0.2); }
@@ -61,5 +64,18 @@ $fila = $resultado->fetch_assoc();
         </form>
         <a href="actas.php">⬅ Volver</a>
     </div>
+    <script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('sw.js')
+                .then(registration => {
+                    console.log('ServiceWorker registrado con éxito', registration.scope);
+                })
+                .catch(error => {
+                    console.log('Fallo al registrar ServiceWorker', error);
+                });
+        });
+    }
+</script>
 </body>
 </html>

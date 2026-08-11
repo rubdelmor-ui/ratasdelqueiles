@@ -2,6 +2,21 @@
 session_start();
 include 'conexion.php';
 
+// 🔴 DETECTAR NUEVAS ACTAS (para la junta)
+$hay_actas_nuevas = false;
+if (isset($_SESSION['usuario_id'])) {
+    $sql_ultima = "SELECT valor FROM configuracion WHERE clave = 'ultima_acta'";
+    $res_ultima = $conexion->query($sql_ultima);
+    if ($res_ultima && $res_ultima->num_rows > 0) {
+        $fila_ultima = $res_ultima->fetch_assoc();
+        $ultima_acta = strtotime($fila_ultima['valor']);
+        $ultima_visita = isset($_SESSION['ultima_visita_actas']) ? $_SESSION['ultima_visita_actas'] : 0;
+        if ($ultima_acta > $ultima_visita) {
+            $hay_actas_nuevas = true;
+        }
+    }
+}
+
 $sql = "SELECT * FROM salidas WHERE fecha_salida >= CURDATE() ORDER BY fecha_salida ASC";
 $resultado = $conexion->query($sql);
 $todas_salidas = [];
@@ -13,6 +28,13 @@ if ($resultado->num_rows > 0) {
 
 $es_junta = (isset($_SESSION['rol']) && $_SESSION['rol'] == 'junta');
 $es_superadmin = (isset($_SESSION['usuario_email']) && $_SESSION['usuario_email'] == 'admin@club.com');
+
+$pendientes_total = 0;
+if ($es_junta) {
+    $count_sql = "SELECT COUNT(*) as total FROM usuarios WHERE aprobado = 0";
+    $count_result = $conexion->query($count_sql);
+    $pendientes_total = $count_result->fetch_assoc()['total'];
+}
 ?>
 <!DOCTYPE html>
 <html class="dark" lang="es">
@@ -20,6 +42,9 @@ $es_superadmin = (isset($_SESSION['usuario_email']) && $_SESSION['usuario_email'
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Salidas - Ratas del Queiles</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#131313">
+    <link rel="apple-touch-icon" href="images/logo2.jpg">
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Anybody:wght@600;700;800&family=Hanken+Grotesk:wght@400;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
@@ -125,18 +150,9 @@ $es_superadmin = (isset($_SESSION['usuario_email']) && $_SESSION['usuario_email'
         }
         .countdown.terminado { color: #ffb4ab; background: rgba(255,0,0,0.15); border-color: rgba(255,0,0,0.3); }
         .responsable .material-symbols-outlined,
-        .asistentes-badge .material-symbols-outlined {
-            font-size: 14px;
-            vertical-align: middle;
-        }
-        .asistentes-badge {
-            cursor: pointer;
-            transition: background 0.2s, border-color 0.2s;
-        }
-        .asistentes-badge:hover {
-            background: rgba(255, 87, 25, 0.25);
-            border-color: #ffb59e;
-        }
+        .asistentes-badge .material-symbols-outlined { font-size: 14px; vertical-align: middle; }
+        .asistentes-badge { cursor: pointer; transition: background 0.2s, border-color 0.2s; }
+        .asistentes-badge:hover { background: rgba(255, 87, 25, 0.25); border-color: #ffb59e; }
         .modal-inscritos {
             display: none;
             position: fixed;
@@ -170,11 +186,7 @@ $es_superadmin = (isset($_SESSION['usuario_email']) && $_SESSION['usuario_email'
             border-bottom: 1px solid rgba(255,255,255,0.1);
             padding-bottom: 8px;
         }
-        .modal-inscritos .modal-lista {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
+        .modal-inscritos .modal-lista { list-style: none; padding: 0; margin: 0; }
         .modal-inscritos .modal-lista li {
             padding: 8px 0;
             border-bottom: 1px solid rgba(255,255,255,0.05);
@@ -216,12 +228,8 @@ $es_superadmin = (isset($_SESSION['usuario_email']) && $_SESSION['usuario_email'
             margin-bottom: 8px;
             text-decoration: none;
         }
-        .btn-excel-modal:hover {
-            background: #218838;
-        }
-        .btn-excel-modal .material-symbols-outlined {
-            font-size: 20px;
-        }
+        .btn-excel-modal:hover { background: #218838; }
+        .btn-excel-modal .material-symbols-outlined { font-size: 20px; }
         .img-placeholder {
             display: flex;
             align-items: center;
@@ -242,6 +250,16 @@ $es_superadmin = (isset($_SESSION['usuario_email']) && $_SESSION['usuario_email'
             margin-top: 2px;
             word-break: break-all;
             font-family: 'JetBrains Mono', monospace;
+        }
+        .punto-notificacion {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            width: 12px;
+            height: 12px;
+            background-color: #dc3545;
+            border-radius: 50%;
+            border: 2px solid #131313;
         }
     </style>
 </head>
@@ -284,18 +302,24 @@ $es_superadmin = (isset($_SESSION['usuario_email']) && $_SESSION['usuario_email'
     <nav class="flex flex-col gap-2 mt-4">
         <a class="flex items-center gap-3 text-on-surface-variant hover:text-primary hover:bg-surface-container-high rounded-lg p-3" href="index.php"><span class="material-symbols-outlined">home_app_logo</span> Home</a>
         <a class="flex items-center gap-3 text-primary-container bg-on-primary-container/10 rounded-lg p-3" href="salidas.php"><span class="material-symbols-outlined" style="font-variation-settings:'FILL'1;">motorcycle</span> Salidas</a>
+        <!-- Enlace a Actas (visible solo para junta) con punto rojo -->
         <?php if($es_junta): ?>
-            <a class="flex items-center gap-3 text-on-surface-variant hover:text-primary hover:bg-surface-container-high rounded-lg p-3" href="actas.php"><span class="material-symbols-outlined">description</span> Actas</a>
+            <a class="flex items-center gap-3 text-on-surface-variant hover:text-primary hover:bg-surface-container-high rounded-lg p-3 transition-colors relative" href="actas.php">
+                <span class="material-symbols-outlined">description</span>
+                <span class="font-label-md uppercase">Actas</span>
+                <?php if($hay_actas_nuevas): ?>
+                    <span class="punto-notificacion"></span>
+                <?php endif; ?>
+            </a>
         <?php endif; ?>
         <?php if($es_junta): ?>
             <a class="flex items-center gap-3 text-on-surface-variant hover:text-primary hover:bg-surface-container-high rounded-lg p-3" href="estatutos.php"><span class="material-symbols-outlined">gavel</span> Estatutos</a>
         <?php endif; ?>
         <?php if($es_junta): ?>
-            <?php $count = $conexion->query("SELECT COUNT(*) as total FROM usuarios WHERE aprobado=0")->fetch_assoc()['total']; ?>
             <a class="flex items-center gap-3 text-on-surface-variant hover:text-primary hover:bg-surface-container-high rounded-lg p-3 relative" href="admin_usuarios.php">
                 <span class="material-symbols-outlined">groups</span> Socios
-                <?php if($count > 0): ?>
-                    <span class="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full px-2 py-0.5"><?php echo $count; ?></span>
+                <?php if($pendientes_total > 0): ?>
+                    <span class="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full px-2 py-0.5"><?php echo $pendientes_total; ?></span>
                 <?php endif; ?>
             </a>
         <?php endif; ?>
@@ -479,7 +503,6 @@ $es_superadmin = (isset($_SESSION['usuario_email']) && $_SESSION['usuario_email'
             <span style="vertical-align:middle;">Asistentes a la salida</span>
         </div>
         <ul id="modalLista" class="modal-lista"></ul>
-        <!-- Botón Excel: solo visible para superadmin -->
         <?php if ($es_superadmin): ?>
             <a id="btnDescargarExcel" href="#" class="btn-excel-modal" target="_blank">
                 <span class="material-symbols-outlined">download</span> Descargar Excel
@@ -492,8 +515,15 @@ $es_superadmin = (isset($_SESSION['usuario_email']) && $_SESSION['usuario_email'
 <nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-unit pb-safe h-20 bg-surface-container border-t border-outline-variant">
     <a class="flex flex-col items-center justify-center text-on-surface-variant p-1" href="index.php"><span class="material-symbols-outlined">home_app_logo</span><span class="font-label-sm uppercase text-xs">Home</span></a>
     <a class="flex flex-col items-center justify-center text-primary-container bg-on-primary-container/10 rounded-xl p-1" href="salidas.php"><span class="material-symbols-outlined" style="font-variation-settings:'FILL'1;">motorcycle</span><span class="font-label-sm uppercase text-xs">Salidas</span></a>
+    <!-- Enlace a Actas (visible solo para junta) con punto rojo -->
     <?php if($es_junta): ?>
-        <a class="flex flex-col items-center justify-center text-on-surface-variant p-1" href="actas.php"><span class="material-symbols-outlined">description</span><span class="font-label-sm uppercase text-xs">Actas</span></a>
+        <a class="flex flex-col items-center justify-center text-on-surface-variant p-1 hover:text-primary transition-colors relative" href="actas.php">
+            <span class="material-symbols-outlined">description</span>
+            <span class="font-label-sm uppercase mt-1">Actas</span>
+            <?php if($hay_actas_nuevas): ?>
+                <span class="punto-notificacion"></span>
+            <?php endif; ?>
+        </a>
     <?php endif; ?>
     <?php if($es_junta): ?>
         <a class="flex flex-col items-center justify-center text-on-surface-variant p-1" href="estatutos.php"><span class="material-symbols-outlined">gavel</span><span class="font-label-sm uppercase text-xs">Estatutos</span></a>
@@ -501,8 +531,8 @@ $es_superadmin = (isset($_SESSION['usuario_email']) && $_SESSION['usuario_email'
     <?php if($es_junta): ?>
         <a class="flex flex-col items-center justify-center text-on-surface-variant p-1 relative" href="admin_usuarios.php">
             <span class="material-symbols-outlined">groups</span><span class="font-label-sm uppercase text-xs">Socios</span>
-            <?php if($count > 0): ?>
-                <span class="absolute -top-1 -right-1 w-5 h-5 bg-red-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-background"><?php echo $count; ?></span>
+            <?php if($pendientes_total > 0): ?>
+                <span class="absolute -top-1 -right-1 w-5 h-5 bg-red-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-background"><?php echo $pendientes_total; ?></span>
             <?php endif; ?>
         </a>
     <?php endif; ?>
@@ -541,8 +571,7 @@ $es_superadmin = (isset($_SESSION['usuario_email']) && $_SESSION['usuario_email'
             const asistentesAttr = elemento.getAttribute('data-asistentes');
             const salidaId = elemento.getAttribute('data-salida-id');
             
-            // Actualizar el enlace del botón Excel (solo si existe)
-            if (btnExcel && salidaId) {
+            if (salidaId && btnExcel) {
                 btnExcel.href = 'descargar_asistentes_excel.php?salida_id=' + salidaId;
             }
 
@@ -581,6 +610,18 @@ $es_superadmin = (isset($_SESSION['usuario_email']) && $_SESSION['usuario_email'
         modal.addEventListener('click', function(e) { if (e.target === modal) cerrarModalFunc(); });
     });
 </script>
-
+<script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('sw.js')
+                .then(registration => {
+                    console.log('ServiceWorker registrado con éxito', registration.scope);
+                })
+                .catch(error => {
+                    console.log('Fallo al registrar ServiceWorker', error);
+                });
+        });
+    }
+</script>
 </body>
 </html>

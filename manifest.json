@@ -1,0 +1,22 @@
+{
+  "name": "Ratas del Queiles",
+  "short_name": "Ratas Q.",
+  "description": "App oficial de la asociación motera Las Ratas del Queiles",
+  "start_url": "/index.php",
+  "display": "standalone",
+  "background_color": "#131313",
+  "theme_color": "#ffb59e",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "images/logo2.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg"
+    },
+    {
+      "src": "images/logo2.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg"
+    }
+  ]
+}

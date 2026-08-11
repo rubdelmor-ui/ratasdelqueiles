@@ -13,16 +13,23 @@ $nombre = $_POST['nombre'];
 $email = $_POST['email'];
 $cargo = $_POST['cargo'] ?? '';
 $aprobado = intval($_POST['aprobado']);
+$pregunta_seguridad = $_POST['pregunta_seguridad'] ?? '';
+$respuesta_seguridad_raw = $_POST['respuesta_seguridad'] ?? '';
 
 // Si es superadmin, permite cambiar rol; si no, mantiene el rol actual
 if ($es_superadmin) {
     $rol = $_POST['rol'];
 } else {
-    // Mantener el rol actual
     $sql_rol = "SELECT rol FROM usuarios WHERE id = $id";
     $res_rol = $conexion->query($sql_rol);
     $fila_rol = $res_rol->fetch_assoc();
     $rol = $fila_rol['rol'];
+}
+
+// Manejar respuesta de seguridad (solo si se ha escrito algo)
+$respuesta_seguridad = null;
+if (!empty($respuesta_seguridad_raw)) {
+    $respuesta_seguridad = password_hash($respuesta_seguridad_raw, PASSWORD_DEFAULT);
 }
 
 // Manejar foto
@@ -47,14 +54,21 @@ if ($_FILES['foto']['error'] == 0) {
     }
 }
 
+// Construir consulta SQL
 $sql = "UPDATE usuarios SET 
         nombre = '$nombre',
         email = '$email',
         rol = '$rol',
         cargo = '$cargo',
         aprobado = $aprobado,
-        foto = '$nombre_foto'
-        WHERE id = $id";
+        foto = '$nombre_foto',
+        pregunta_seguridad = '$pregunta_seguridad'";
+
+if ($respuesta_seguridad !== null) {
+    $sql .= ", respuesta_seguridad = '$respuesta_seguridad'";
+}
+
+$sql .= " WHERE id = $id";
 
 if ($conexion->query($sql) === TRUE) {
     header("Location: admin_usuarios.php");

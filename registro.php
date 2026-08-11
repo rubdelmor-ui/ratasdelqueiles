@@ -9,11 +9,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $email = $_POST['email'];
     $password = $_POST['password'];
     $password_confirm = $_POST['password_confirm'];
+    $pregunta = $_POST['pregunta'];
+    $respuesta = $_POST['respuesta'];
 
     if ($password !== $password_confirm) {
         $mensaje = '<div style="color:red;">❌ Las contraseñas no coinciden.</div>';
     } else {
         $password_hash = password_hash($password, PASSWORD_DEFAULT);
+        $respuesta_hash = password_hash($respuesta, PASSWORD_DEFAULT);
 
         $check_sql = "SELECT id FROM usuarios WHERE email = '$email'";
         $check_result = $conexion->query($check_sql);
@@ -32,8 +35,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 }
             }
 
-            $sql = "INSERT INTO usuarios (nombre, email, password, rol, aprobado, foto) 
-                    VALUES ('$nombre', '$email', '$password_hash', 'socio', 0, '$nombre_foto')";
+            $sql = "INSERT INTO usuarios (nombre, email, password, rol, aprobado, foto, pregunta_seguridad, respuesta_seguridad) 
+                    VALUES ('$nombre', '$email', '$password_hash', 'socio', 0, '$nombre_foto', '$pregunta', '$respuesta_hash')";
             
             if ($conexion->query($sql) === TRUE) {
                 $mensaje = '<div style="color:green; font-weight:bold;">✅ ¡Registro exitoso! Tu solicitud está pendiente de aprobación. <a href="login.php">Ir a Iniciar Sesión</a></div>';
@@ -50,6 +53,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registro - Ratas del Queiles</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#131313">
+    <link rel="apple-touch-icon" href="images/logo2.jpg">
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Anybody:wght@600;700;800&family=Hanken+Grotesk:wght@400;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
@@ -141,9 +147,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
         .chrome-border { border: 1px solid rgba(255, 255, 255, 0.1); }
         .input-dark {
-            background-color: #0d0d0d !important;  /* Fondo negro más oscuro */
+            background-color: #0d0d0d !important;
             border: 1px solid rgba(255, 255, 255, 0.15) !important;
-            color: #ffffff !important;             /* Texto blanco puro */
+            color: #ffffff !important;
             padding: 0.7rem 1rem !important;
             border-radius: 0.25rem !important;
             width: 100% !important;
@@ -158,6 +164,20 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
         .input-dark::placeholder {
             color: #666 !important;
+        }
+        select.input-dark {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23888' d='M6 8L0 0h12z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 12px;
+            padding-right: 2.5rem;
+        }
+        select.input-dark option {
+            background-color: #0d0d0d;
+            color: #ffffff;
         }
         .btn-registro {
             background: #007bff;
@@ -178,7 +198,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             margin-bottom: 15px;
             border-radius: 5px;
         }
-        /* Contenedor de contraseña con toggle */
         .password-wrapper {
             position: relative;
             width: 100%;
@@ -211,7 +230,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         .toggle-password .material-symbols-outlined {
             font-size: 20px;
         }
-        /* Centrar el formulario en la página */
         body {
             display: flex;
             align-items: center;
@@ -236,7 +254,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     <div class="bg-surface-container rounded-xl chrome-border p-8">
         <?php echo $mensaje; ?>
-        <!-- autocomplete="off" para evitar autocompletado -->
         <form method="POST" action="" enctype="multipart/form-data" autocomplete="off">
             <div class="mb-4">
                 <label class="block text-on-surface-variant font-label-md text-label-md uppercase mb-1" for="nombre">Nombre y Apellidos *</label>
@@ -246,7 +263,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 <label class="block text-on-surface-variant font-label-md text-label-md uppercase mb-1" for="email">Correo electrónico *</label>
                 <input type="email" name="email" id="email" class="input-dark" placeholder="tuemail@ejemplo.com" value="" required>
             </div>
-            <!-- Contraseña con toggle -->
             <div class="mb-4">
                 <label class="block text-on-surface-variant font-label-md text-label-md uppercase mb-1" for="password">Contraseña *</label>
                 <div class="password-wrapper">
@@ -257,7 +273,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     </button>
                 </div>
             </div>
-            <!-- Confirmar contraseña con toggle -->
             <div class="mb-4">
                 <label class="block text-on-surface-variant font-label-md text-label-md uppercase mb-1" for="password_confirm">Repetir Contraseña *</label>
                 <div class="password-wrapper">
@@ -268,6 +283,24 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     </button>
                 </div>
             </div>
+
+            <!-- Pregunta de seguridad -->
+            <div class="mb-4">
+                <label class="block text-on-surface-variant font-label-md text-label-md uppercase mb-1" for="pregunta">Pregunta de seguridad *</label>
+                <select name="pregunta" id="pregunta" class="input-dark" required>
+                    <option value="">Selecciona una pregunta...</option>
+                    <option value="¿Cuál es el nombre de tu primera mascota?">¿Cuál es el nombre de tu primera mascota?</option>
+                    <option value="¿Cuál es tu ciudad natal?">¿Cuál es tu ciudad natal?</option>
+                    <option value="¿Cuál es el apellido de soltera de tu madre?">¿Cuál es el apellido de soltera de tu madre?</option>
+                    <option value="¿Cuál es tu comida favorita?">¿Cuál es tu comida favorita?</option>
+                    <option value="¿Cuál es el nombre de tu mejor amigo de la infancia?">¿Cuál es el nombre de tu mejor amigo de la infancia?</option>
+                </select>
+            </div>
+            <div class="mb-4">
+                <label class="block text-on-surface-variant font-label-md text-label-md uppercase mb-1" for="respuesta">Respuesta *</label>
+                <input type="text" name="respuesta" id="respuesta" class="input-dark" placeholder="Escribe tu respuesta" required>
+            </div>
+
             <div class="mb-6">
                 <label class="block text-on-surface-variant font-label-md text-label-md uppercase mb-1" for="foto">Foto de perfil (opcional)</label>
                 <input type="file" name="foto" id="foto" accept=".jpg,.jpeg,.png,.gif,.webp" class="input-dark" style="padding: 0.5rem;">
@@ -319,6 +352,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         });
     });
 </script>
-
+<script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('sw.js')
+                .then(registration => {
+                    console.log('ServiceWorker registrado con éxito', registration.scope);
+                })
+                .catch(error => {
+                    console.log('Fallo al registrar ServiceWorker', error);
+                });
+        });
+    }
+</script>
 </body>
 </html>

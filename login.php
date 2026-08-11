@@ -40,6 +40,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Iniciar Sesión - Ratas del Queiles</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#131313">
+    <link rel="apple-touch-icon" href="images/logo2.jpg">
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Anybody:wght@600;700;800&family=Hanken+Grotesk:wght@400;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
@@ -131,21 +134,23 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
         .chrome-border { border: 1px solid rgba(255, 255, 255, 0.1); }
         .input-dark {
-            background-color: #1a1a1a;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: #e5e2e1;
-            padding: 0.7rem 1rem;
-            border-radius: 0.25rem;
-            width: 100%;
+            background-color: #0d0d0d !important;
+            border: 1px solid rgba(255, 255, 255, 0.15) !important;
+            color: #ffffff !important;
+            padding: 0.7rem 1rem !important;
+            border-radius: 0.25rem !important;
+            width: 100% !important;
             transition: border-color 0.2s;
+            font-family: 'Hanken Grotesk', sans-serif !important;
+            font-size: 1rem !important;
         }
         .input-dark:focus {
-            outline: none;
-            border-color: #ffb59e;
-            box-shadow: 0 0 0 2px rgba(255,181,158,0.2);
+            outline: none !important;
+            border-color: #ffb59e !important;
+            box-shadow: 0 0 0 2px rgba(255,181,158,0.2) !important;
         }
         .input-dark::placeholder {
-            color: #666;
+            color: #666 !important;
         }
         .password-wrapper {
             position: relative;
@@ -179,82 +184,148 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         .toggle-password .material-symbols-outlined {
             font-size: 20px;
         }
+        body {
+            background-color: #131313 !important;
+            color: #e5e2e1 !important;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        .bg-surface-container {
+            background-color: #201f1f !important;
+        }
+        .text-on-background {
+            color: #e5e2e1 !important;
+        }
+        .text-secondary {
+            color: #b8b8b8 !important;
+        }
+        .text-primary {
+            color: #ffb59e !important;
+        }
+        .btn-login {
+            background: #ff5719 !important;
+            color: black !important;
+            border: 2px solid black !important;
+            padding: 0.75rem 2rem !important;
+            border-radius: 0.25rem !important;
+            font-weight: 600 !important;
+            cursor: pointer !important;
+            transition: background 0.2s !important;
+            width: 100% !important;
+            font-family: 'Anybody', sans-serif !important;
+            text-transform: uppercase !important;
+            font-size: 1rem !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 0.5rem !important;
+        }
+        .btn-login:hover {
+            background: #ffb59e !important;
+        }
+        .error-box {
+            background: rgba(255,0,0,0.15);
+            border: 1px solid rgba(255,0,0,0.3);
+            color: #ffb4ab;
+            padding: 0.75rem;
+            border-radius: 0.25rem;
+            margin-bottom: 1rem;
+        }
+        .font-headline-xl {
+            font-family: 'Anybody', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+        }
     </style>
 </head>
-<body class="bg-background text-on-background font-body-md min-h-screen flex items-center justify-center noise-bg p-4">
-    <div class="w-full max-w-md">
-        <div class="text-center mb-8">
-            <img alt="Logo" class="h-20 w-20 object-contain rounded-full border-2 border-outline-variant mx-auto mb-4" src="images/logo2.jpg">
-            <h1 class="font-headline-xl text-headline-xl text-primary uppercase tracking-tighter">Ratas del Queiles</h1>
-            <p class="text-on-surface-variant font-label-md text-label-md uppercase mt-2">Accede a tu cuenta de socio</p>
-        </div>
+<body>
 
-        <div class="bg-surface-container rounded-xl chrome-border p-8">
-            <?php if (!empty($error)): ?>
-                <div class="bg-error-container/20 border border-error/30 text-error rounded-lg px-4 py-3 mb-6 font-label-md text-sm flex items-center gap-2">
-                    <span class="material-symbols-outlined text-[20px]">error</span>
-                    <?php echo $error; ?>
-                </div>
-            <?php endif; ?>
+<div class="w-full max-w-md">
+    <div class="text-center mb-8">
+        <img alt="Logo" class="h-20 w-20 object-contain rounded-full border-2 border-outline-variant mx-auto mb-4" src="images/logo2.jpg">
+        <h1 class="font-headline-xl text-primary uppercase tracking-tighter">Ratas del Queiles</h1>
+        <p class="text-on-surface-variant font-label-md text-label-md uppercase mt-2" style="color: #e6beb2; font-family: 'JetBrains Mono', monospace; font-size: 0.875rem; font-weight: 500; text-transform: uppercase;">Accede a tu cuenta de socio</p>
+    </div>
 
-            <form method="POST" action="">
-                <!-- Email -->
-                <div class="mb-5">
-                    <label class="block text-on-surface-variant font-label-md text-label-md uppercase mb-1" for="email">Correo electrónico</label>
-                    <input type="email" name="email" id="email" class="input-dark" placeholder="tuemail@ejemplo.com" required>
-                </div>
+    <div class="bg-surface-container rounded-xl chrome-border p-8">
+        <?php if (!empty($error)): ?>
+            <div class="error-box"><?php echo $error; ?></div>
+        <?php endif; ?>
 
-                <!-- Contraseña con toggle -->
-                <div class="mb-6">
-                    <label class="block text-on-surface-variant font-label-md text-label-md uppercase mb-1" for="password">Contraseña</label>
-                    <div class="password-wrapper">
-                        <input type="password" name="password" id="password" class="input-dark" placeholder="••••••••" required>
-                        <button type="button" class="toggle-password" id="togglePassword">
-                            <span class="material-symbols-outlined">visibility</span>
-                            <span id="toggleText">Mostrar</span>
-                        </button>
-                    </div>
-                </div>
-
-                <button type="submit" class="w-full bg-primary-container text-black font-headline-md text-[18px] uppercase px-8 py-3 rounded-sm border-2 border-black shadow-[inset_0_0_0_2px_rgba(255,255,255,0.2)] hover:bg-primary transition-colors flex items-center justify-center gap-2">
-                    <span class="material-symbols-outlined">login</span> Entrar al Club
-                </button>
-            </form>
-
-            <div class="mt-6 text-center space-y-3">
-                <a href="registro.php" class="block text-secondary hover:text-primary transition-colors font-label-md uppercase text-sm">
-                    <span class="material-symbols-outlined text-[16px] align-middle mr-1">person_add</span> ¿No tienes cuenta? Regístrate aquí
-                </a>
-                <a href="index.php" class="block text-secondary hover:text-primary transition-colors font-label-md uppercase text-sm">
-                    <span class="material-symbols-outlined text-[16px] align-middle mr-1">arrow_back</span> Volver al inicio
-                </a>
+        <form method="POST" action="">
+            <div class="mb-5">
+                <label class="block text-on-surface-variant font-label-md text-label-md uppercase mb-1" for="email" style="color: #b0b0b0; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em;">Correo electrónico</label>
+                <input type="email" name="email" id="email" class="input-dark" placeholder="tuemail@ejemplo.com" required>
             </div>
-        </div>
+            <div class="mb-6">
+                <label class="block text-on-surface-variant font-label-md text-label-md uppercase mb-1" for="password" style="color: #b0b0b0; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em;">Contraseña</label>
+                <div class="password-wrapper">
+                    <input type="password" name="password" id="password" class="input-dark" placeholder="••••••••" required>
+                    <button type="button" class="toggle-password" id="togglePassword">
+                        <span class="material-symbols-outlined">visibility</span>
+                        <span id="toggleText">Mostrar</span>
+                    </button>
+                </div>
+            </div>
+            <button type="submit" class="btn-login">
+                <span class="material-symbols-outlined">login</span> Entrar al Club
+            </button>
+        </form>
 
-        <div class="text-center mt-6 text-secondary text-xs opacity-50">
-            <span class="font-label-sm">🐀 Ratas del Queiles · Todos los derechos reservados</span>
+        <div class="mt-6 text-center space-y-3">
+            <a href="olvide_password.php" class="block text-secondary hover:text-primary transition-colors font-label-md uppercase text-sm" style="color: #b8b8b8; text-decoration: none; font-family: 'JetBrains Mono', monospace; font-size: 0.875rem; font-weight: 500; text-transform: uppercase;">
+                🔑 ¿Olvidaste tu contraseña?
+            </a>
+            <a href="registro.php" class="block text-secondary hover:text-primary transition-colors font-label-md uppercase text-sm" style="color: #b8b8b8; text-decoration: none; font-family: 'JetBrains Mono', monospace; font-size: 0.875rem; font-weight: 500; text-transform: uppercase;">
+                <span class="material-symbols-outlined text-[16px] align-middle mr-1">person_add</span> ¿No tienes cuenta? Regístrate aquí
+            </a>
+            <a href="index.php" class="block text-secondary hover:text-primary transition-colors font-label-md uppercase text-sm" style="color: #b8b8b8; text-decoration: none; font-family: 'JetBrains Mono', monospace; font-size: 0.875rem; font-weight: 500; text-transform: uppercase;">
+                <span class="material-symbols-outlined text-[16px] align-middle mr-1">arrow_back</span> Volver al inicio
+            </a>
         </div>
     </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const toggleBtn = document.getElementById('togglePassword');
-            const passwordInput = document.getElementById('password');
-            const toggleText = document.getElementById('toggleText');
-            const icon = toggleBtn.querySelector('.material-symbols-outlined');
+    <div class="text-center mt-6 text-secondary text-xs opacity-50">
+        <span class="font-label-sm" style="font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; font-weight: 500;">🐀 Ratas del Queiles · Todos los derechos reservados</span>
+    </div>
+</div>
 
-            toggleBtn.addEventListener('click', function() {
-                if (passwordInput.type === 'password') {
-                    passwordInput.type = 'text';
-                    icon.textContent = 'visibility_off';
-                    toggleText.textContent = 'Ocultar';
-                } else {
-                    passwordInput.type = 'password';
-                    icon.textContent = 'visibility';
-                    toggleText.textContent = 'Mostrar';
-                }
-            });
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const toggleBtn = document.getElementById('togglePassword');
+        const passwordInput = document.getElementById('password');
+        const toggleText = document.getElementById('toggleText');
+        const icon = toggleBtn.querySelector('.material-symbols-outlined');
+
+        toggleBtn.addEventListener('click', function() {
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                icon.textContent = 'visibility_off';
+                toggleText.textContent = 'Ocultar';
+            } else {
+                passwordInput.type = 'password';
+                icon.textContent = 'visibility';
+                toggleText.textContent = 'Mostrar';
+            }
         });
-    </script>
+    });
+</script>
+<script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('sw.js')
+                .then(registration => {
+                    console.log('ServiceWorker registrado con éxito', registration.scope);
+                })
+                .catch(error => {
+                    console.log('Fallo al registrar ServiceWorker', error);
+                });
+        });
+    }
+</script>
 </body>
 </html>

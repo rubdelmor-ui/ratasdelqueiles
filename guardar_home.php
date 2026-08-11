@@ -10,6 +10,7 @@ if (!isset($_SESSION['rol']) || $_SESSION['rol'] != 'junta' || !$es_superadmin) 
 }
 
 $contenido = $_POST['contenido'];
+$texto_imagen = $_POST['texto_imagen'] ?? '';
 
 // Obtener imagen actual para saber si hay que borrar la antigua
 $sql_img = "SELECT imagen FROM contenido_home WHERE seccion = 'bienvenida'";
@@ -45,13 +46,14 @@ if ($_FILES['imagen']['error'] == 0) {
 // Actualizar o insertar (usamos ON DUPLICATE KEY UPDATE o UPDATE)
 $sql = "UPDATE contenido_home SET 
         contenido = '$contenido',
+        texto_imagen = '$texto_imagen',
         imagen = '$nombre_imagen'
         WHERE seccion = 'bienvenida'";
 
 if ($conexion->query($sql) === TRUE) {
     // Si no se actualizó ninguna fila (porque no existía), insertamos
     if ($conexion->affected_rows == 0) {
-        $sql_insert = "INSERT INTO contenido_home (seccion, contenido, imagen) VALUES ('bienvenida', '$contenido', '$nombre_imagen')";
+        $sql_insert = "INSERT INTO contenido_home (seccion, contenido, texto_imagen, imagen) VALUES ('bienvenida', '$contenido', '$texto_imagen', '$nombre_imagen')";
         $conexion->query($sql_insert);
     }
     header("Location: editar_home.php?ok=1");

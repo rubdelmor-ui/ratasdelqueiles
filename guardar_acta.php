@@ -2,7 +2,7 @@
 session_start();
 include 'conexion.php';
 
-// Seguridad: Solo Superadmin
+// Seguridad: Solo Superadmin puede subir actas
 $superadmin_email = 'admin@club.com';
 if (!isset($_SESSION['rol']) || $_SESSION['rol'] != 'junta' || $_SESSION['usuario_email'] != $superadmin_email) {
     header("Location: actas.php");
@@ -21,19 +21,23 @@ $nombre_original = $archivo['name'];
 $ruta_temporal = $archivo['tmp_name'];
 $error = $archivo['error'];
 
-// Crear un nombre único para el PDF (ej: 20260815_123456.pdf)
 $extension = pathinfo($nombre_original, PATHINFO_EXTENSION);
 $nombre_unico = date('Ymd_His') . '.' . $extension;
 $ruta_destino = 'pdf_actas/' . $nombre_unico;
 
-// Verificar que sea un PDF y no haya error
 if ($error == 0 && strtolower($extension) == 'pdf') {
     if (move_uploaded_file($ruta_temporal, $ruta_destino)) {
-        // Guardar en la base de datos (sin el texto largo, solo el PDF)
+        // Guardar en la base de datos
         $sql = "INSERT INTO actas (titulo, fecha_reunion, autor, firmas, archivo_pdf) 
                 VALUES ('$titulo', '$fecha', '$autor', '$asistentes', '$nombre_unico')";
         
         if ($conexion->query($sql) === TRUE) {
+            // 🔴 ACTUALIZAR TIMESTAMP DE ÚLTIMA ACTA (asegurado)
+            $update = $conexion->query("UPDATE configuracion SET valor = NOW() WHERE clave = 'ultima_acta'");
+            // Si no se actualizó ninguna fila, insertar
+            if ($conexion->affected_rows == 0) {
+                $conexion->query("INSERT INTO configuracion (clave, valor) VALUES ('ultima_acta', NOW())");
+            }
             header("Location: actas.php");
         } else {
             echo "Error en la base de datos: " . $conexion->error;

@@ -2,6 +2,21 @@
 session_start();
 include 'conexion.php';
 
+// 🔴 DETECTAR NUEVAS ACTAS PARA SOCIOS
+$hay_actas_nuevas = false;
+if (isset($_SESSION['usuario_id']) && isset($_SESSION['rol']) && $_SESSION['rol'] != 'junta') {
+    $sql_ultima = "SELECT valor FROM configuracion WHERE clave = 'ultima_acta'";
+    $res_ultima = $conexion->query($sql_ultima);
+    if ($res_ultima && $res_ultima->num_rows > 0) {
+        $fila_ultima = $res_ultima->fetch_assoc();
+        $ultima_acta = strtotime($fila_ultima['valor']);
+        $ultima_visita = isset($_SESSION['ultima_visita_actas']) ? $_SESSION['ultima_visita_actas'] : 0;
+        if ($ultima_acta > $ultima_visita) {
+            $hay_actas_nuevas = true;
+        }
+    }
+}
+
 // Seguridad: Solo la JUNTA puede entrar aquí
 if (!isset($_SESSION['rol']) || $_SESSION['rol'] != 'junta') {
     header("Location: login.php");
@@ -104,6 +119,9 @@ $count = $pendientes->num_rows;
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Socios - Ratas del Queiles</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#131313">
+    <link rel="apple-touch-icon" href="images/logo2.jpg">
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Anybody:wght@600;700;800&family=Hanken+Grotesk:wght@400;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
@@ -244,6 +262,16 @@ $count = $pendientes->num_rows;
             text-transform: uppercase;
             letter-spacing: 0.05em;
         }
+        .punto-notificacion {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            width: 12px;
+            height: 12px;
+            background-color: #dc3545;
+            border-radius: 50%;
+            border: 2px solid #131313;
+        }
     </style>
 </head>
 <body class="bg-background text-on-background font-body-md min-h-screen flex flex-col noise-bg">
@@ -254,7 +282,6 @@ $count = $pendientes->num_rows;
         <h1 class="font-headline-lg-mobile text-headline-lg-mobile uppercase text-primary tracking-tighter">Ratas del Queiles</h1>
     </div>
     <div class="flex items-center gap-3">
-        <!-- Se ha eliminado la foto del usuario -->
         <div class="relative" id="settings-menu">
             <button id="settings-button" class="text-on-surface-variant hover:bg-surface-container-high transition-colors duration-200 ease-in-out p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-primary" aria-label="Ajustes">
                 <span class="material-symbols-outlined">settings</span>
@@ -315,12 +342,14 @@ $count = $pendientes->num_rows;
             <span class="material-symbols-outlined">motorcycle</span>
             <span class="font-label-md uppercase">Salidas</span>
         </a>
-        <?php if($es_junta): ?>
-            <a class="flex items-center gap-3 text-on-surface-variant hover:text-primary hover:bg-surface-container-high rounded-lg p-3 transition-colors" href="actas.php">
-                <span class="material-symbols-outlined">description</span>
-                <span class="font-label-md uppercase">Actas</span>
-            </a>
-        <?php endif; ?>
+        <!-- Enlace a Actas con punto rojo para socios -->
+        <a class="flex items-center gap-3 text-on-surface-variant hover:text-primary hover:bg-surface-container-high rounded-lg p-3 transition-colors relative" href="actas.php">
+            <span class="material-symbols-outlined">description</span>
+            <span class="font-label-md uppercase">Actas</span>
+            <?php if($hay_actas_nuevas && !$es_junta): ?>
+                <span class="punto-notificacion"></span>
+            <?php endif; ?>
+        </a>
         <?php if($es_junta): ?>
             <a class="flex items-center gap-3 text-on-surface-variant hover:text-primary hover:bg-surface-container-high rounded-lg p-3 transition-colors" href="estatutos.php">
                 <span class="material-symbols-outlined">gavel</span>
@@ -566,12 +595,14 @@ $count = $pendientes->num_rows;
         <span class="material-symbols-outlined">motorcycle</span>
         <span class="font-label-sm uppercase mt-1">Salidas</span>
     </a>
-    <?php if($es_junta): ?>
-        <a class="flex flex-col items-center justify-center text-on-surface-variant p-1 hover:text-primary transition-colors" href="actas.php">
-            <span class="material-symbols-outlined">description</span>
-            <span class="font-label-sm uppercase mt-1">Actas</span>
-        </a>
-    <?php endif; ?>
+    <!-- Enlace a Actas con punto rojo -->
+    <a class="flex flex-col items-center justify-center text-on-surface-variant p-1 hover:text-primary transition-colors relative" href="actas.php">
+        <span class="material-symbols-outlined">description</span>
+        <span class="font-label-sm uppercase mt-1">Actas</span>
+        <?php if($hay_actas_nuevas && !$es_junta): ?>
+            <span class="punto-notificacion"></span>
+        <?php endif; ?>
+    </a>
     <?php if($es_junta): ?>
         <a class="flex flex-col items-center justify-center text-on-surface-variant p-1 hover:text-primary transition-colors" href="estatutos.php">
             <span class="material-symbols-outlined">gavel</span>
@@ -596,6 +627,18 @@ $count = $pendientes->num_rows;
         document.getElementById('btnToggle').textContent = div.classList.contains('visible') ? '📋 Ocultar Listado' : '📋 Ver Listado';
     }
 </script>
-
+<script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('sw.js')
+                .then(registration => {
+                    console.log('ServiceWorker registrado con éxito', registration.scope);
+                })
+                .catch(error => {
+                    console.log('Fallo al registrar ServiceWorker', error);
+                });
+        });
+    }
+</script>
 </body>
 </html>

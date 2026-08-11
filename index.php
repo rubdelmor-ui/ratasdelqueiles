@@ -2,6 +2,26 @@
 session_start();
 include 'conexion.php';
 
+// 🔴 DETECTAR NUEVAS ACTAS (para la junta)
+$hay_actas_nuevas = false;
+if (isset($_SESSION['usuario_id'])) {
+    $sql_ultima = "SELECT valor FROM configuracion WHERE clave = 'ultima_acta'";
+    $res_ultima = $conexion->query($sql_ultima);
+    if ($res_ultima && $res_ultima->num_rows > 0) {
+        $fila_ultima = $res_ultima->fetch_assoc();
+        $ultima_acta = strtotime($fila_ultima['valor']);
+        $ultima_visita = isset($_SESSION['ultima_visita_actas']) ? $_SESSION['ultima_visita_actas'] : 0;
+        if ($ultima_acta > $ultima_visita) {
+            $hay_actas_nuevas = true;
+        }
+    }
+}
+
+// Obtener la próxima salida
+$sql_proxima = "SELECT * FROM salidas WHERE fecha_salida >= CURDATE() ORDER BY fecha_salida ASC LIMIT 1";
+$result_proxima = $conexion->query($sql_proxima);
+$proxima_salida = $result_proxima->fetch_assoc();
+
 // Obtener contenido editable de la home
 $sql_contenido = "SELECT * FROM contenido_home WHERE seccion = 'bienvenida'";
 $result_contenido = $conexion->query($sql_contenido);
@@ -9,13 +29,22 @@ if ($result_contenido && $result_contenido->num_rows > 0) {
     $fila = $result_contenido->fetch_assoc();
     $contenido_bienvenida = $fila['contenido'] ?? 'La carretera espera. Únete a la próxima ruta o revisa las últimas novedades del club.';
     $imagen_home = $fila['imagen'] ?? null;
+    $texto_imagen = $fila['texto_imagen'] ?? '';
 } else {
     $contenido_bienvenida = 'La carretera espera. Únete a la próxima ruta o revisa las últimas novedades del club.';
     $imagen_home = null;
+    $texto_imagen = '';
 }
 
 $superadmin_email = 'admin@club.com';
 $es_superadmin = (isset($_SESSION['usuario_email']) && $_SESSION['usuario_email'] == $superadmin_email);
+$es_junta = (isset($_SESSION['rol']) && $_SESSION['rol'] == 'junta');
+$pendientes_total = 0;
+if ($es_junta) {
+    $count_sql = "SELECT COUNT(*) as total FROM usuarios WHERE aprobado = 0";
+    $count_result = $conexion->query($count_sql);
+    $pendientes_total = $count_result->fetch_assoc()['total'];
+}
 ?>
 <!DOCTYPE html>
 <html class="dark" lang="es">
@@ -23,6 +52,9 @@ $es_superadmin = (isset($_SESSION['usuario_email']) && $_SESSION['usuario_email'
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ratas del Queiles - Home</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#131313">
+    <link rel="apple-touch-icon" href="images/logo2.jpg">
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Anybody:wght@600;700;800&family=Hanken+Grotesk:wght@400;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
@@ -114,17 +146,10 @@ $es_superadmin = (isset($_SESSION['usuario_email']) && $_SESSION['usuario_email'
         }
         .chrome-border { border: 1px solid rgba(255, 255, 255, 0.1); }
         @media (min-width: 768px) { main { margin-left: 16rem; max-width: calc(100% - 16rem); } }
-        .imagen-home {
-            max-width: 100%;
-            max-height: 300px;
-            object-fit: cover;
-            border-radius: 8px;
-            margin-top: 8px;
-        }
-        /* Botón de edición: círculo rojo fijo, subido para no tapar el botón "Socios" */
+        .imagen-home { max-width: 100%; max-height: 300px; object-fit: cover; border-radius: 8px; margin-top: 8px; }
         .btn-editar-home {
             position: fixed;
-            bottom: 100px;   /* Subido para evitar superposición con la barra de navegación móvil */
+            bottom: 30px;
             right: 30px;
             width: 56px;
             height: 56px;
@@ -142,32 +167,22 @@ $es_superadmin = (isset($_SESSION['usuario_email']) && $_SESSION['usuario_email'
             text-decoration: none;
             font-size: 28px;
         }
-        .btn-editar-home:hover {
-            background-color: #b02a37;
-            transform: scale(1.08);
-        }
-        .btn-editar-home .material-symbols-outlined {
-            font-size: 28px;
-        }
-        /* Recuadro de imagen */
-        .recuadro-imagen {
-            background-color: #1a1a1a;
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 12px;
-            padding: 16px;
-            text-align: center;
-            min-height: 120px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .placeholder-imagen {
-            color: #666;
-            font-size: 0.9rem;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 8px;
+        .btn-editar-home:hover { background-color: #b02a37; transform: scale(1.08); }
+        .btn-editar-home .material-symbols-outlined { font-size: 28px; }
+        .recuadro-imagen { background-color: #1a1a1a; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 16px; text-align: center; min-height: 120px; display: flex; align-items: center; justify-content: center; }
+        .placeholder-imagen { color: #666; font-size: 0.9rem; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        .recuadro-texto-imagen { background-color: #1a1a1a; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 16px 24px; margin-bottom: 12px; display: inline-block; width: auto; max-width: 100%; text-align: center; font-size: 1.1rem; color: #e5e2e1; }
+        .recuadro-texto-imagen p { margin: 0; }
+        .contenedor-texto-imagen { display: flex; justify-content: center; width: 100%; }
+        .punto-notificacion {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            width: 12px;
+            height: 12px;
+            background-color: #dc3545;
+            border-radius: 50%;
+            border: 2px solid #131313;
         }
     </style>
 </head>
@@ -238,24 +253,23 @@ $es_superadmin = (isset($_SESSION['usuario_email']) && $_SESSION['usuario_email'
             <span class="material-symbols-outlined">motorcycle</span>
             <span class="font-label-md uppercase">Salidas</span>
         </a>
-        <?php if(isset($_SESSION['rol']) && $_SESSION['rol'] == 'junta'): ?>
-            <a class="flex items-center gap-3 text-on-surface-variant hover:text-primary hover:bg-surface-container-high rounded-lg p-3 transition-colors" href="actas.php">
+        <!-- Enlace a Actas (visible solo para junta) con punto rojo -->
+        <?php if($es_junta): ?>
+            <a class="flex items-center gap-3 text-on-surface-variant hover:text-primary hover:bg-surface-container-high rounded-lg p-3 transition-colors relative" href="actas.php">
                 <span class="material-symbols-outlined">description</span>
                 <span class="font-label-md uppercase">Actas</span>
+                <?php if($hay_actas_nuevas): ?>
+                    <span class="punto-notificacion"></span>
+                <?php endif; ?>
             </a>
         <?php endif; ?>
-        <?php if(isset($_SESSION['rol']) && $_SESSION['rol'] == 'junta'): ?>
+        <?php if($es_junta): ?>
             <a class="flex items-center gap-3 text-on-surface-variant hover:text-primary hover:bg-surface-container-high rounded-lg p-3 transition-colors" href="estatutos.php">
                 <span class="material-symbols-outlined">gavel</span>
                 <span class="font-label-md uppercase">Estatutos</span>
             </a>
         <?php endif; ?>
-        <?php if(isset($_SESSION['rol']) && $_SESSION['rol'] == 'junta'): ?>
-            <?php 
-                $count_sql = "SELECT COUNT(*) as total FROM usuarios WHERE aprobado = 0";
-                $count_result = $conexion->query($count_sql);
-                $pendientes_total = $count_result->fetch_assoc()['total'];
-            ?>
+        <?php if($es_junta): ?>
             <a class="flex items-center gap-3 text-on-surface-variant hover:text-primary hover:bg-surface-container-high rounded-lg p-3 transition-colors relative" href="admin_usuarios.php">
                 <span class="material-symbols-outlined">groups</span>
                 <span class="font-label-md uppercase">Socios</span>
@@ -276,7 +290,7 @@ $es_superadmin = (isset($_SESSION['usuario_email']) && $_SESSION['usuario_email'
 
 <!-- ===== MAIN ===== -->
 <main class="flex-grow p-margin-mobile flex flex-col gap-gutter pb-24 md:pb-8 max-w-container-max mx-auto w-full">
-    <!-- Recuadro 1: Bienvenida (HERO) -->
+    <!-- HERO -->
     <section class="relative rounded-xl overflow-hidden chrome-border h-64 md:h-96 flex items-center justify-center text-center">
         <div class="absolute inset-0 bg-cover bg-center z-0 opacity-40 mix-blend-overlay" style="background-image: url('assets/images/fondo_moto.jpg');"></div>
         <div class="relative z-10 p-6">
@@ -296,7 +310,16 @@ $es_superadmin = (isset($_SESSION['usuario_email']) && $_SESSION['usuario_email'
         </div>
     </section>
 
-    <!-- Recuadro 2: Imagen -->
+    <!-- TEXTO ENCIMA DE LA IMAGEN -->
+    <?php if (!empty($texto_imagen)): ?>
+        <div class="contenedor-texto-imagen">
+            <div class="recuadro-texto-imagen">
+                <p><?php echo nl2br(htmlspecialchars($texto_imagen)); ?></p>
+            </div>
+        </div>
+    <?php endif; ?>
+
+    <!-- IMAGEN -->
     <div class="recuadro-imagen">
         <?php if (!empty($imagen_home) && file_exists('images/home/' . $imagen_home)): ?>
             <img src="images/home/<?php echo $imagen_home; ?>" alt="Imagen de la home" class="imagen-home">
@@ -309,7 +332,7 @@ $es_superadmin = (isset($_SESSION['usuario_email']) && $_SESSION['usuario_email'
     </div>
 </main>
 
-<!-- ===== BOTÓN DE EDICIÓN (círculo rojo fijo, subido) ===== -->
+<!-- ===== BOTÓN DE EDICIÓN (solo superadmin) ===== -->
 <?php if ($es_superadmin): ?>
     <a href="editar_home.php" class="btn-editar-home" title="Editar contenido de la home">
         <span class="material-symbols-outlined">edit</span>
@@ -326,19 +349,23 @@ $es_superadmin = (isset($_SESSION['usuario_email']) && $_SESSION['usuario_email'
         <span class="material-symbols-outlined">motorcycle</span>
         <span class="font-label-sm uppercase mt-1">Salidas</span>
     </a>
-    <?php if(isset($_SESSION['rol']) && $_SESSION['rol'] == 'junta'): ?>
-        <a class="flex flex-col items-center justify-center text-on-surface-variant p-1 hover:text-primary transition-colors" href="actas.php">
+    <!-- Enlace a Actas (visible solo para junta) con punto rojo -->
+    <?php if($es_junta): ?>
+        <a class="flex flex-col items-center justify-center text-on-surface-variant p-1 hover:text-primary transition-colors relative" href="actas.php">
             <span class="material-symbols-outlined">description</span>
             <span class="font-label-sm uppercase mt-1">Actas</span>
+            <?php if($hay_actas_nuevas): ?>
+                <span class="punto-notificacion"></span>
+            <?php endif; ?>
         </a>
     <?php endif; ?>
-    <?php if(isset($_SESSION['rol']) && $_SESSION['rol'] == 'junta'): ?>
+    <?php if($es_junta): ?>
         <a class="flex flex-col items-center justify-center text-on-surface-variant p-1 hover:text-primary transition-colors" href="estatutos.php">
             <span class="material-symbols-outlined">gavel</span>
             <span class="font-label-sm uppercase mt-1">Estatutos</span>
         </a>
     <?php endif; ?>
-    <?php if(isset($_SESSION['rol']) && $_SESSION['rol'] == 'junta'): ?>
+    <?php if($es_junta): ?>
         <a class="flex flex-col items-center justify-center text-on-surface-variant p-1 hover:text-primary transition-colors relative" href="admin_usuarios.php">
             <span class="material-symbols-outlined">groups</span>
             <span class="font-label-sm uppercase mt-1">Socios</span>
@@ -348,6 +375,18 @@ $es_superadmin = (isset($_SESSION['usuario_email']) && $_SESSION['usuario_email'
         </a>
     <?php endif; ?>
 </nav>
-
+<script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('sw.js')
+                .then(registration => {
+                    console.log('ServiceWorker registrado con éxito', registration.scope);
+                })
+                .catch(error => {
+                    console.log('Fallo al registrar ServiceWorker', error);
+                });
+        });
+    }
+</script>
 </body>
 </html>
