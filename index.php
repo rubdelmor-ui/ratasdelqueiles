@@ -54,7 +54,7 @@ if ($es_junta) {
     <title>Ratas del Queiles - Home</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#131313">
-    <link rel="apple-touch-icon" href="images/logo2.jpg">
+    <link rel="apple-touch-icon" href="/images/logo2.jpg">
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Anybody:wght@600;700;800&family=Hanken+Grotesk:wght@400;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
@@ -191,7 +191,7 @@ if ($es_junta) {
 <!-- ===== HEADER ===== -->
 <header class="bg-background border-b border-outline-variant flex justify-between items-center w-full px-margin-mobile py-unit h-16 sticky top-0 z-50">
     <div class="flex items-center gap-2">
-        <img alt="Ratas del Queiles Logo" class="h-8 w-8 object-contain rounded-full border border-outline-variant" src="images/logo2.jpg">
+        <img alt="Ratas del Queiles Logo" class="h-8 w-8 object-contain rounded-full border border-outline-variant" src="/images/logo2.jpg">
         <h1 class="font-headline-lg-mobile text-headline-lg-mobile uppercase text-primary tracking-tighter">Ratas del Queiles</h1>
     </div>
     <div class="flex items-center gap-4">
