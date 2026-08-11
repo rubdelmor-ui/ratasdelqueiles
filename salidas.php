@@ -403,8 +403,8 @@ if ($es_junta) {
                 $ruta_imagen = 'images/salidas/' . $nombre_imagen;
                 $ruta_defecto = 'assets/images/fondo_moto.jpg';
 
-                $ruta_absoluta_imagen = $_SERVER['DOCUMENT_ROOT'] . '/clubmoto/' . $ruta_imagen;
-                $ruta_absoluta_defecto = $_SERVER['DOCUMENT_ROOT'] . '/clubmoto/' . $ruta_defecto;
+                $ruta_absoluta_imagen = $_SERVER['DOCUMENT_ROOT'] . '/' . $ruta_imagen;
+                $ruta_absoluta_defecto = $_SERVER['DOCUMENT_ROOT'] . '/' . $ruta_defecto;
 
                 $imagen_existe = (!empty($nombre_imagen) && file_exists($ruta_absoluta_imagen));
                 $defecto_existe = file_exists($ruta_absoluta_defecto);
