@@ -2,7 +2,7 @@
 session_start();
 include 'conexion.php';
 
-// 🔐 Solo superadmin puede editar[cite: 43]
+// 🔐 Solo superadmin puede editar
 $es_superadmin = (isset($_SESSION['usuario_email']) && $_SESSION['usuario_email'] == 'admin@club.com');
 if (!isset($_SESSION['rol']) || $_SESSION['rol'] != 'junta' || !$es_superadmin) {
     header("Location: index.php");
@@ -10,7 +10,7 @@ if (!isset($_SESSION['rol']) || $_SESSION['rol'] != 'junta' || !$es_superadmin) 
 }
 
 // =========================================================================
-// 1. PROCESAR EL FORMULARIO (POST)[cite: 42]
+// 1. PROCESAR EL FORMULARIO (POST)
 // =========================================================================
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $contenido = $_POST['contenido'];
@@ -38,7 +38,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $api_key = getenv('CLOUDINARY_API_KEY');
             $api_secret = getenv('CLOUDINARY_API_SECRET');
             $timestamp = time();
-            $signature = sha1("timestamp=" . $timestamp . $api_secret);
+            
+            // CORREGIDO: Incluir la carpeta 'ratas_home' dentro de la firma de seguridad
+            $signature = sha1("folder=ratas_home&timestamp=" . $timestamp . $api_secret);
 
             $ch = curl_init("https://api.cloudinary.com/v1_1/{$cloud_name}/image/upload");
             $cfile = new CURLFile($archivo['tmp_name']);
@@ -50,6 +52,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // Evita errores SSL en local
             $respuesta = curl_exec($ch);
             curl_close($ch);
             
@@ -90,7 +93,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 }
 
 // =========================================================================
-// 2. CARGAR DATOS PARA EL FORMULARIO (GET)[cite: 43]
+// 2. CARGAR DATOS PARA EL FORMULARIO (GET)
 // =========================================================================
 $sql = "SELECT * FROM contenido_home WHERE seccion = 'bienvenida'";
 $resultado = $conexion->query($sql);
@@ -178,7 +181,6 @@ if ($resultado && $resultado->num_rows > 0) {
             <div class="bg-red-900/50 text-red-200 p-4 rounded mb-4 text-sm border border-red-500/30"><?php echo $error_mensaje; ?></div>
         <?php endif; ?>
 
-        <!-- NOTA: El formulario apunta a este mismo archivo -->
         <form action="editar_home.php" method="POST" enctype="multipart/form-data" class="space-y-5">
             <div>
                 <label class="label-dark" for="contenido">Texto de bienvenida</label>
