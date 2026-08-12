@@ -9,11 +9,110 @@ if (!isset($_SESSION['rol']) || $_SESSION['rol'] != 'junta' || !$es_superadmin) 
     exit;
 }
 
-$id = intval($_GET['id']);
-$sql = "SELECT * FROM usuarios WHERE id = $id";
-$resultado = $conexion->query($sql);
-$fila = $resultado->fetch_assoc();
-if (!$fila) {
+// =========================================================================
+// 1. PROCESAR EL FORMULARIO (POST)[cite: 25]
+// =========================================================================
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $id = intval($_POST['id']);
+    $nombre = $_POST['nombre'];
+    $email = $_POST['email'];
+    $cargo = $_POST['cargo'] ?? '';
+    $aprobado = intval($_POST['aprobado']);
+    $pregunta_seguridad = $_POST['pregunta_seguridad'] ?? '';
+    $respuesta_seguridad_raw = $_POST['respuesta_seguridad'] ?? '';
+
+    // Si es superadmin, permite cambiar rol; si no, mantiene el rol actual
+    if ($es_superadmin) {
+        $rol = $_POST['rol'];
+    } else {
+        $sql_rol = "SELECT rol FROM usuarios WHERE id = $id";
+        $res_rol = $conexion->query($sql_rol);
+        $fila_rol = $res_rol->fetch_assoc();
+        $rol = $fila_rol['rol'];
+    }
+
+    // Manejar respuesta de seguridad
+    $respuesta_seguridad = null;
+    if (!empty($respuesta_seguridad_raw)) {
+        $respuesta_seguridad = password_hash($respuesta_seguridad_raw, PASSWORD_DEFAULT);
+    }
+
+    // Manejar foto: obtenemos la actual primero
+    $sql_foto = "SELECT foto FROM usuarios WHERE id = $id";
+    $res_foto = $conexion->query($sql_foto);
+    $fila_foto = $res_foto->fetch_assoc();
+    $nombre_foto = $fila_foto['foto'] ?? null;
+
+    // Subida a Cloudinary
+    if (isset($_FILES['foto']) && $_FILES['foto']['error'] == 0) {
+        $archivo = $_FILES['foto'];
+        $extension = strtolower(pathinfo($archivo['name'], PATHINFO_EXTENSION));
+        $tipos_permitidos = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+        
+        if (in_array($extension, $tipos_permitidos)) {
+            // --- CLOUDINARY UPLOAD ---
+            $cloud_name = getenv('CLOUDINARY_CLOUD_NAME');
+            $api_key = getenv('CLOUDINARY_API_KEY');
+            $api_secret = getenv('CLOUDINARY_API_SECRET');
+            $timestamp = time();
+            $signature = sha1("timestamp=" . $timestamp . $api_secret);
+
+            $ch = curl_init("https://api.cloudinary.com/v1_1/{$cloud_name}/image/upload");
+            $cfile = new CURLFile($archivo['tmp_name']);
+            $data = [
+                'file' => $cfile, 'api_key' => $api_key, 'timestamp' => $timestamp,
+                'signature' => $signature, 'folder' => 'ratas_perfiles'
+            ];
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            $respuesta = curl_exec($ch);
+            curl_close($ch);
+            
+            $json = json_decode($respuesta, true);
+            if (isset($json['secure_url'])) {
+                $nombre_foto = $json['secure_url']; // Guardamos la URL segura
+            }
+        }
+    }
+
+    // Construir consulta SQL
+    $sql_update = "UPDATE usuarios SET 
+            nombre = '$nombre',
+            email = '$email',
+            rol = '$rol',
+            cargo = '$cargo',
+            aprobado = $aprobado,
+            foto = '$nombre_foto',
+            pregunta_seguridad = '$pregunta_seguridad'";
+
+    if ($respuesta_seguridad !== null) {
+        $sql_update .= ", respuesta_seguridad = '$respuesta_seguridad'";
+    }
+
+    $sql_update .= " WHERE id = $id";
+
+    if ($conexion->query($sql_update) === TRUE) {
+        header("Location: admin_usuarios.php");
+        exit;
+    } else {
+        $error_mensaje = "Error al actualizar: " . $conexion->error;
+    }
+}
+
+// =========================================================================
+// 2. CARGAR DATOS PARA EL FORMULARIO (GET)[cite: 27]
+// =========================================================================
+if (isset($_GET['id'])) {
+    $id = intval($_GET['id']);
+    $sql = "SELECT * FROM usuarios WHERE id = $id";
+    $resultado = $conexion->query($sql);
+    $fila = $resultado->fetch_assoc();
+    if (!$fila) {
+        header("Location: admin_usuarios.php");
+        exit;
+    }
+} else if (!isset($_POST['id'])) {
     header("Location: admin_usuarios.php");
     exit;
 }
@@ -83,23 +182,6 @@ if (!$fila) {
                         "surface-bright": "#393939",
                         "secondary-container": "#484949",
                         "on-surface": "#e5e2e1"
-                    },
-                    borderRadius: { "DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem" },
-                    spacing: { "unit": "4px", "gutter": "16px", "container-max": "1200px", "margin-mobile": "20px", "margin-desktop": "40px" },
-                    fontFamily: {
-                        "headline-xl": ["Anybody"], "headline-lg": ["Anybody"], "headline-md": ["Anybody"],
-                        "label-sm": ["JetBrains Mono"], "body-lg": ["Hanken Grotesk"], "label-md": ["JetBrains Mono"],
-                        "body-md": ["Hanken Grotesk"], "headline-lg-mobile": ["Anybody"]
-                    },
-                    fontSize: {
-                        "headline-xl": ["48px", { "lineHeight": "52px", "letterSpacing": "-0.02em", "fontWeight": "800" }],
-                        "headline-lg": ["32px", { "lineHeight": "38px", "fontWeight": "700" }],
-                        "headline-md": ["24px", { "lineHeight": "30px", "fontWeight": "600" }],
-                        "label-sm": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
-                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
-                        "label-md": ["14px", { "lineHeight": "20px", "fontWeight": "500" }],
-                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
-                        "headline-lg-mobile": ["28px", { "lineHeight": "34px", "fontWeight": "700" }]
                     }
                 }
             }
@@ -117,50 +199,21 @@ if (!$fila) {
             pointer-events: none;
         }
         .chrome-border { border: 1px solid rgba(255, 255, 255, 0.1); }
-        @media (min-width: 768px) { main { margin-left: 16rem; max-width: calc(100% - 16rem); } }
         .input-dark {
-            background-color: #0d0d0d !important;
-            border: 1px solid rgba(255, 255, 255, 0.15) !important;
-            color: #ffffff !important;
-            padding: 0.6rem 0.8rem !important;
-            border-radius: 0.25rem !important;
-            width: 100% !important;
+            background-color: #0d0d0d;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #ffffff;
+            padding: 0.6rem 0.8rem;
+            border-radius: 0.25rem;
+            width: 100%;
             transition: border-color 0.2s;
-            font-family: 'Hanken Grotesk', sans-serif !important;
-            font-size: 1rem !important;
+            font-family: 'Hanken Grotesk', sans-serif;
+            font-size: 1rem;
         }
-        .input-dark:focus {
-            outline: none !important;
-            border-color: #ffb59e !important;
-            box-shadow: 0 0 0 2px rgba(255,181,158,0.2) !important;
-        }
-        .input-dark::placeholder { color: #666 !important; }
-        select.input-dark option { background-color: #0d0d0d !important; color: #ffffff !important; }
+        .input-dark:focus { outline: none; border-color: #ffb59e; box-shadow: 0 0 0 2px rgba(255,181,158,0.2); }
+        select.input-dark option { background-color: #0d0d0d; color: #ffffff; }
         .foto-actual { max-width: 120px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.1); }
-        .label-dark {
-            display: block;
-            color: #b0b0b0 !important;
-            font-family: 'JetBrains Mono', monospace !important;
-            font-size: 0.75rem !important;
-            font-weight: 500 !important;
-            text-transform: uppercase !important;
-            letter-spacing: 0.05em !important;
-            margin-bottom: 0.25rem !important;
-        }
-        .header-titulo {
-            font-family: 'Anybody', sans-serif;
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: #e5e2e1;
-            text-transform: uppercase;
-            letter-spacing: -0.02em;
-        }
-        .header-subtitulo {
-            font-size: 0.85rem;
-            color: #888;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
+        .label-dark { display: block; color: #b0b0b0; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem; }
     </style>
 </head>
 <body class="bg-background text-on-background font-body-md min-h-screen flex flex-col noise-bg">
@@ -183,13 +236,13 @@ if (!$fila) {
             }
         }
         ?>
-        <?php if (!empty($foto_usuario) && file_exists('uploads/perfiles/' . $foto_usuario)): ?>
-            <img src="uploads/perfiles/<?php echo $foto_usuario; ?>" alt="Foto" class="user-avatar" id="avatar-button" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.1);cursor:pointer;">
+        <?php if (!empty($foto_usuario) && strpos($foto_usuario, 'http') === 0): ?>
+            <img src="<?php echo $foto_usuario; ?>" alt="Foto" class="user-avatar" id="avatar-button" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.1);cursor:pointer;">
         <?php else: ?>
             <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='16' fill='%232a2a2a'/%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='18' fill='%23666' font-family='Arial'%3E👤%3C/text%3E%3C/svg%3E" alt="Sin foto" class="user-avatar" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.1);cursor:pointer;">
         <?php endif; ?>
         <div class="relative" id="settings-menu">
-            <button id="settings-button" class="text-on-surface-variant hover:bg-surface-container-high transition-colors duration-200 ease-in-out p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-primary" aria-label="Ajustes">
+            <button id="settings-button" class="text-on-surface-variant hover:bg-surface-container-high transition-colors duration-200 ease-in-out p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-primary">
                 <span class="material-symbols-outlined">settings</span>
             </button>
             <div id="settings-dropdown" class="absolute right-0 mt-2 w-48 bg-surface-container border border-outline-variant rounded-lg shadow-lg py-1 hidden z-50">
@@ -201,98 +254,17 @@ if (!$fila) {
                     <a href="logout.php" class="block px-4 py-2 text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-colors font-label-md">
                         <span class="material-symbols-outlined text-[18px] align-middle mr-2">logout</span> Cerrar Sesión
                     </a>
-                <?php else: ?>
-                    <a href="login.php" class="block px-4 py-2 text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-colors font-label-md">
-                        <span class="material-symbols-outlined text-[18px] align-middle mr-2">login</span> Iniciar Sesión
-                    </a>
-                    <a href="registro.php" class="block px-4 py-2 text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-colors font-label-md">
-                        <span class="material-symbols-outlined text-[18px] align-middle mr-2">person_add</span> Registrarse
-                    </a>
                 <?php endif; ?>
             </div>
         </div>
     </div>
 </header>
 
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const settingsButton = document.getElementById('settings-button');
-        const avatarButton = document.getElementById('avatar-button');
-        const settingsDropdown = document.getElementById('settings-dropdown');
-
-        function toggleDropdown(e) {
-            e.stopPropagation();
-            settingsDropdown.classList.toggle('hidden');
-        }
-        if (settingsButton) settingsButton.addEventListener('click', toggleDropdown);
-        if (avatarButton) avatarButton.addEventListener('click', toggleDropdown);
-        document.addEventListener('click', function(e) {
-            const container = document.getElementById('settings-menu');
-            if (!container.contains(e.target)) {
-                settingsDropdown.classList.add('hidden');
-            }
-        });
-        settingsDropdown.querySelectorAll('a').forEach(function(link) {
-            link.addEventListener('click', function() {
-                settingsDropdown.classList.add('hidden');
-            });
-        });
-    });
-</script>
-
-<!-- ===== SIDEBAR ===== -->
-<aside class="hidden md:flex flex-col fixed left-0 top-16 bottom-0 w-64 bg-surface-container border-r border-outline-variant p-4 z-40">
-    <nav class="flex flex-col gap-2 mt-4">
-        <a class="flex items-center gap-3 text-on-surface-variant hover:text-primary hover:bg-surface-container-high rounded-lg p-3 transition-colors" href="index.php">
-            <span class="material-symbols-outlined">home_app_logo</span>
-            <span class="font-label-md uppercase">Home</span>
-        </a>
-        <a class="flex items-center gap-3 text-on-surface-variant hover:text-primary hover:bg-surface-container-high rounded-lg p-3 transition-colors" href="salidas.php">
-            <span class="material-symbols-outlined">motorcycle</span>
-            <span class="font-label-md uppercase">Salidas</span>
-        </a>
-        <?php if(isset($_SESSION['rol']) && $_SESSION['rol'] == 'junta'): ?>
-            <a class="flex items-center gap-3 text-on-surface-variant hover:text-primary hover:bg-surface-container-high rounded-lg p-3 transition-colors" href="actas.php">
-                <span class="material-symbols-outlined">description</span>
-                <span class="font-label-md uppercase">Actas</span>
-            </a>
-        <?php endif; ?>
-        <?php if(isset($_SESSION['rol']) && $_SESSION['rol'] == 'junta'): ?>
-            <a class="flex items-center gap-3 text-on-surface-variant hover:text-primary hover:bg-surface-container-high rounded-lg p-3 transition-colors" href="estatutos.php">
-                <span class="material-symbols-outlined">gavel</span>
-                <span class="font-label-md uppercase">Estatutos</span>
-            </a>
-        <?php endif; ?>
-        <?php if(isset($_SESSION['rol']) && $_SESSION['rol'] == 'junta'): ?>
-            <?php 
-                $count_sql = "SELECT COUNT(*) as total FROM usuarios WHERE aprobado = 0";
-                $count_result = $conexion->query($count_sql);
-                $pendientes_total = $count_result->fetch_assoc()['total'];
-            ?>
-            <a class="flex items-center gap-3 text-on-surface-variant hover:text-primary hover:bg-surface-container-high rounded-lg p-3 transition-colors relative" href="admin_usuarios.php">
-                <span class="material-symbols-outlined">groups</span>
-                <span class="font-label-md uppercase">Socios</span>
-                <?php if($pendientes_total > 0): ?>
-                    <span class="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full px-2 py-0.5"><?php echo $pendientes_total; ?></span>
-                <?php endif; ?>
-            </a>
-        <?php endif; ?>
-    </nav>
-    <div class="mt-auto pb-8 pt-4 border-t border-outline-variant/30">
-        <div class="bg-surface-container-high p-4 rounded border border-outline-variant/50">
-            <span class="block text-primary font-label-md text-label-md uppercase mb-2">Próxima Reunión</span>
-            <span class="block text-on-background font-headline-md text-[16px] uppercase">Viernes, 20:00</span>
-            <span class="block text-on-surface-variant font-label-sm text-label-sm">Sede del Club</span>
-        </div>
-    </div>
-</aside>
-
-<!-- ===== MAIN ===== -->
 <main class="flex-grow p-4 md:p-6 flex flex-col gap-6 pb-24 md:pb-8 max-w-container-max mx-auto w-full">
     <div class="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-outline-variant pb-4">
         <div>
-            <h2 class="header-titulo text-2xl md:text-3xl">✏️ Editar Socio</h2>
-            <p class="header-subtitulo mt-1">Modifica los datos del socio. Solo el Superadmin puede hacerlo.</p>
+            <h2 class="font-headline-lg text-headline-lg text-on-background uppercase tracking-tight">✏️ Editar Socio</h2>
+            <p class="text-secondary mt-1">Modifica los datos del socio.</p>
         </div>
         <div class="mt-3 md:mt-0">
             <a href="admin_usuarios.php" class="text-secondary hover:text-primary transition-colors font-label-md uppercase text-sm inline-flex items-center gap-1">
@@ -302,7 +274,12 @@ if (!$fila) {
     </div>
 
     <div class="bg-surface-container rounded-xl chrome-border p-6 md:p-8">
-        <form action="actualizar_socio.php" method="POST" enctype="multipart/form-data" class="space-y-5">
+        <?php if(isset($error_mensaje)): ?>
+            <div class="bg-red-900/50 text-red-200 p-4 rounded mb-4"><?php echo $error_mensaje; ?></div>
+        <?php endif; ?>
+
+        <!-- NOTA: El form envía a sí mismo -->
+        <form action="editar_socio.php" method="POST" enctype="multipart/form-data" class="space-y-5">
             <input type="hidden" name="id" value="<?php echo $fila['id']; ?>">
 
             <div>
@@ -314,7 +291,6 @@ if (!$fila) {
                 <input type="email" name="email" id="email" value="<?php echo htmlspecialchars($fila['email']); ?>" class="input-dark" required>
             </div>
 
-            <!-- Rol (solo visible para superadmin) -->
             <?php if ($es_superadmin): ?>
                 <div>
                     <label class="label-dark" for="rol">Rol</label>
@@ -332,11 +308,10 @@ if (!$fila) {
             <?php endif; ?>
 
             <div>
-                <label class="label-dark" for="cargo">Cargo (solo para miembros de la Junta)</label>
+                <label class="label-dark" for="cargo">Cargo (solo Junta)</label>
                 <input type="text" name="cargo" id="cargo" value="<?php echo htmlspecialchars($fila['cargo'] ?? ''); ?>" class="input-dark" placeholder="Ej: Presidente, Secretario, Tesorero...">
             </div>
 
-            <!-- Pregunta de seguridad -->
             <div>
                 <label class="label-dark" for="pregunta_seguridad">Pregunta de seguridad</label>
                 <select name="pregunta_seguridad" id="pregunta_seguridad" class="input-dark">
@@ -350,8 +325,8 @@ if (!$fila) {
             </div>
             <div>
                 <label class="label-dark" for="respuesta_seguridad">Respuesta de seguridad</label>
-                <input type="text" name="respuesta_seguridad" id="respuesta_seguridad" class="input-dark" value="<?php echo htmlspecialchars($fila['respuesta_seguridad'] ?? ''); ?>" placeholder="Escribe la respuesta">
-                <p class="text-secondary text-xs mt-1">La respuesta se almacena de forma segura (hasheada). Si la dejas vacía, el socio no podrá recuperar su contraseña.</p>
+                <input type="text" name="respuesta_seguridad" id="respuesta_seguridad" class="input-dark" value="" placeholder="Solo rellena si quieres cambiar la respuesta actual">
+                <p class="text-secondary text-xs mt-1">Si la dejas vacía, se mantendrá la respuesta anterior.</p>
             </div>
 
             <div>
@@ -364,10 +339,11 @@ if (!$fila) {
 
             <div>
                 <label class="label-dark">Foto actual</label>
-                <?php if (!empty($fila['foto']) && file_exists('uploads/perfiles/' . $fila['foto'])): ?>
-                    <img src="uploads/perfiles/<?php echo $fila['foto']; ?>" class="foto-actual" alt="Foto">
+                <?php if (!empty($fila['foto']) && strpos($fila['foto'], 'http') === 0): ?>
+                    <img src="<?php echo $fila['foto']; ?>" class="foto-actual" alt="Foto">
+                    <p class="text-secondary text-sm mt-1">Guardada en la nube</p>
                 <?php else: ?>
-                    <p class="text-secondary text-sm">Sin foto</p>
+                    <p class="text-secondary text-sm">Sin foto o no es de la nube</p>
                 <?php endif; ?>
             </div>
 
@@ -388,50 +364,9 @@ if (!$fila) {
         </form>
     </div>
 </main>
-
-<!-- ===== BOTTOM NAVBAR ===== -->
-<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-unit pb-safe h-20 bg-surface-container border-t border-outline-variant">
-    <a class="flex flex-col items-center justify-center text-on-surface-variant p-1 hover:text-primary transition-colors" href="index.php">
-        <span class="material-symbols-outlined">home_app_logo</span>
-        <span class="font-label-sm uppercase mt-1">Home</span>
-    </a>
-    <a class="flex flex-col items-center justify-center text-on-surface-variant p-1 hover:text-primary transition-colors" href="salidas.php">
-        <span class="material-symbols-outlined">motorcycle</span>
-        <span class="font-label-sm uppercase mt-1">Salidas</span>
-    </a>
-    <?php if(isset($_SESSION['rol']) && $_SESSION['rol'] == 'junta'): ?>
-        <a class="flex flex-col items-center justify-center text-on-surface-variant p-1 hover:text-primary transition-colors" href="actas.php">
-            <span class="material-symbols-outlined">description</span>
-            <span class="font-label-sm uppercase mt-1">Actas</span>
-        </a>
-    <?php endif; ?>
-    <?php if(isset($_SESSION['rol']) && $_SESSION['rol'] == 'junta'): ?>
-        <a class="flex flex-col items-center justify-center text-on-surface-variant p-1 hover:text-primary transition-colors" href="estatutos.php">
-            <span class="material-symbols-outlined">gavel</span>
-            <span class="font-label-sm uppercase mt-1">Estatutos</span>
-        </a>
-    <?php endif; ?>
-    <?php if(isset($_SESSION['rol']) && $_SESSION['rol'] == 'junta'): ?>
-        <a class="flex flex-col items-center justify-center text-primary-container bg-on-primary-container/10 rounded-xl p-1 transition-transform duration-100 scale-95 relative" href="admin_usuarios.php">
-            <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">groups</span>
-            <span class="font-label-sm uppercase mt-1">Socios</span>
-            <?php if($pendientes_total > 0): ?>
-                <span class="absolute -top-1 -right-1 w-5 h-5 bg-red-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-background"><?php echo $pendientes_total; ?></span>
-            <?php endif; ?>
-        </a>
-    <?php endif; ?>
-</nav>
 <script>
     if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('sw.js')
-                .then(registration => {
-                    console.log('ServiceWorker registrado con éxito', registration.scope);
-                })
-                .catch(error => {
-                    console.log('Fallo al registrar ServiceWorker', error);
-                });
-        });
+        window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js'); });
     }
 </script>
 </body>

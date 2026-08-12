@@ -2,68 +2,130 @@
 session_start();
 include 'conexion.php';
 
-// SEGURIDAD: Solo el Superadmin puede crear actas
-$superadmin_email = 'admin@club.com'; // <--- CAMBIA SI ES OTRO
+// Seguridad: Solo Superadmin puede subir actas
+$superadmin_email = 'admin@club.com';
 if (!isset($_SESSION['rol']) || $_SESSION['rol'] != 'junta' || $_SESSION['usuario_email'] != $superadmin_email) {
     header("Location: actas.php");
     exit;
 }
+
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $titulo = $_POST['titulo'];
+    $fecha = $_POST['fecha_reunion'];
+    $asistentes = $_POST['asistentes'];
+    $autor = $_POST['autor'];
+    $nombre_unico = NULL;
+
+    if (isset($_FILES['archivo_pdf']) && $_FILES['archivo_pdf']['error'] == 0) {
+        $archivo = $_FILES['archivo_pdf'];
+        $extension = strtolower(pathinfo($archivo['name'], PATHINFO_EXTENSION));
+
+        if ($extension == 'pdf') {
+            // --- CLOUDINARY UPLOAD ---
+            $cloud_name = getenv('CLOUDINARY_CLOUD_NAME');
+            $api_key = getenv('CLOUDINARY_API_KEY');
+            $api_secret = getenv('CLOUDINARY_API_SECRET');
+            $timestamp = time();
+            $signature = sha1("timestamp=" . $timestamp . $api_secret);
+
+            $ch = curl_init("https://api.cloudinary.com/v1_1/{$cloud_name}/raw/upload");
+            $cfile = new CURLFile($archivo['tmp_name']);
+            $data = [
+                'file' => $cfile, 'api_key' => $api_key, 'timestamp' => $timestamp,
+                'signature' => $signature, 'folder' => 'ratas_actas_pdf'
+            ];
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            $respuesta = curl_exec($ch);
+            curl_close($ch);
+            
+            $json = json_decode($respuesta, true);
+            if (isset($json['secure_url'])) {
+                $nombre_unico = $json['secure_url']; // URL de Cloudinary
+            } else {
+                $error_mensaje = "Error al subir a Cloudinary.";
+            }
+        } else {
+            $error_mensaje = "Solo se permiten archivos PDF.";
+        }
+    }
+
+    if (!isset($error_mensaje)) {
+        $sql = "INSERT INTO actas (titulo, fecha_reunion, autor, firmas, archivo_pdf) 
+                VALUES ('$titulo', '$fecha', '$autor', '$asistentes', '$nombre_unico')";
+        
+        if ($conexion->query($sql) === TRUE) {
+            // Actualizar notificación de actas
+            $conexion->query("UPDATE configuracion SET valor = NOW() WHERE clave = 'ultima_acta'");
+            if ($conexion->affected_rows == 0) {
+                $conexion->query("INSERT INTO configuracion (clave, valor) VALUES ('ultima_acta', NOW())");
+            }
+            header("Location: actas.php");
+            exit;
+        } else {
+            $error_mensaje = "Error en base de datos: " . $conexion->error;
+        }
+    }
+}
 ?>
 <!DOCTYPE html>
-<html>
+<html class="dark" lang="es">
 <head>
-    <title>Nueva Acta</title>
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#131313">
-    <link rel="apple-touch-icon" href="images/logo2.jpg">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nueva Acta - Ratas del Queiles</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Anybody:wght@600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: { extend: { colors: { "primary": "#ffb59e", "surface-container": "#201f1f", "surface-container-high": "#2a2a2a", "outline-variant": "#5c4037", "background": "#131313", "on-background": "#e5e2e1", "primary-container": "#ff5719" } } }
+        }
+    </script>
     <style>
-        body { font-family: Arial; background: #f0f0f0; padding: 20px; }
-        .contenedor { max-width: 600px; background: white; padding: 30px; margin: 0 auto; border-radius: 10px; box-shadow: 0 0 15px rgba(0,0,0,0.2); }
-        label { font-weight: bold; display: block; margin-top: 15px; }
-        input, textarea { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; }
-        .boton { background: #0056b3; color: white; font-weight: bold; border: none; padding: 12px 20px; margin-top: 20px; cursor: pointer; border-radius: 5px; font-size: 18px; width: 100%; }
-        .boton:hover { background: #003d80; }
-        a { display: block; text-align: center; margin-top: 20px; color: #333; }
+        .input-dark { background-color: #1a1a1a; border: 1px solid rgba(255, 255, 255, 0.1); color: #e5e2e1; padding: 0.6rem 0.8rem; border-radius: 0.25rem; width: 100%; }
+        .input-dark:focus { outline: none; border-color: #ffb59e; }
+        .label-dark { display: block; color: #b0b0b0; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; text-transform: uppercase; margin-bottom: 0.25rem; }
     </style>
 </head>
-<body>
-    <div class="contenedor">
-        <h1>📤 Subir Nueva Acta (PDF)</h1>
+<body class="bg-background text-on-background min-h-screen p-6">
+    <div class="max-w-2xl mx-auto">
+        <h2 class="text-2xl font-bold uppercase mb-6 text-primary">➕ Nueva Acta</h2>
         
-        <!-- IMPORTANTE: enctype="multipart/form-data" para subir archivos -->
-        <form action="guardar_acta.php" method="POST" enctype="multipart/form-data">
-            
-            <label>Título del Acta *</label>
-            <input type="text" name="titulo" placeholder="Ej: Acta Asamblea General 2026" required>
+        <?php if(isset($error_mensaje)): ?>
+            <div class="bg-red-900/50 text-red-200 p-4 rounded mb-4"><?php echo $error_mensaje; ?></div>
+        <?php endif; ?>
 
-            <label>Fecha de la reunión *</label>
-            <input type="date" name="fecha_reunion" value="<?php echo date('Y-m-d'); ?>" required>
+        <div class="bg-surface-container rounded-xl border border-outline-variant p-6">
+            <form action="nueva_acta.php" method="POST" enctype="multipart/form-data" class="space-y-4">
+                <div>
+                    <label class="label-dark">Título *</label>
+                    <input type="text" name="titulo" class="input-dark" placeholder="Ej: Acta Asamblea General 2026" required>
+                </div>
+                <div>
+                    <label class="label-dark">Fecha de Reunión *</label>
+                    <input type="date" name="fecha_reunion" value="<?php echo date('Y-m-d'); ?>" class="input-dark" required>
+                </div>
+                <div>
+                    <label class="label-dark">Número de asistentes (Firmas) *</label>
+                    <input type="number" name="asistentes" min="0" value="0" class="input-dark" required>
+                </div>
+                <div>
+                    <label class="label-dark">Autor / Secretario</label>
+                    <input type="text" name="autor" class="input-dark" placeholder="Quien redacta el acta">
+                </div>
+                <div>
+                    <label class="label-dark">Subir PDF (opcional pero recomendado)</label>
+                    <input type="file" name="archivo_pdf" accept=".pdf" class="input-dark">
+                </div>
 
-            <label>Número de asistentes *</label>
-            <input type="number" name="asistentes" min="0" value="0" required>
-
-            <label>Autor (quién redacta el acta)</label>
-            <input type="text" name="autor" placeholder="Ej: Secretario del Club">
-
-            <label>Archivo PDF (adjunta tu acta) *</label>
-            <input type="file" name="archivo_pdf" accept=".pdf" required>
-
-            <button type="submit" class="boton">✅ Subir Acta</button>
-        </form>
-        <a href="actas.php">⬅ Volver al listado</a>
+                <div class="flex gap-4 pt-4 border-t border-outline-variant">
+                    <button type="submit" class="bg-primary-container text-black font-bold uppercase px-6 py-2 rounded">✅ Guardar Acta</button>
+                    <a href="actas.php" class="bg-surface-container-high text-white font-bold uppercase px-6 py-2 rounded border border-outline-variant text-center">Cancelar</a>
+                </div>
+            </form>
+        </div>
     </div>
-    <script>
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('sw.js')
-                .then(registration => {
-                    console.log('ServiceWorker registrado con éxito', registration.scope);
-                })
-                .catch(error => {
-                    console.log('Fallo al registrar ServiceWorker', error);
-                });
-        });
-    }
-</script>
 </body>
 </html>

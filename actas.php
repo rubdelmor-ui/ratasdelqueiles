@@ -211,8 +211,15 @@ $resultado = $conexion->query($sql);
                     <div class="fecha">📅 <?php echo $fila['fecha_reunion']; ?></div>
                     <div class="firmas">✍️ Firmas: <?php echo $fila['firmas']; ?></div>
                     <div class="acciones">
-                        <?php if (!empty($fila['archivo_pdf']) && file_exists('pdf_actas/' . $fila['archivo_pdf'])): ?>
-                            <a href="pdf_actas/<?php echo $fila['archivo_pdf']; ?>" target="_blank" class="btn-pdf">📄 Ver PDF</a>
+                        <?php 
+                        $url_pdf = '';
+                        if (!empty($fila['archivo_pdf'])) {
+                            // Si empieza por http (Cloudinary), usamos la URL tal cual. Si no, usamos la ruta antigua.
+                            $url_pdf = (strpos($fila['archivo_pdf'], 'http') === 0) ? $fila['archivo_pdf'] : 'pdf_actas/' . $fila['archivo_pdf'];
+                        }
+                        if (!empty($url_pdf)): 
+                        ?>
+                            <a href="<?php echo $url_pdf; ?>" target="_blank" class="btn-pdf">📄 Ver PDF</a>
                         <?php endif; ?>
                         <?php if ($es_superadmin): ?>
                             <a href="editar_acta.php?id=<?php echo $fila['id']; ?>" class="btn-editar">✏️ Editar</a>

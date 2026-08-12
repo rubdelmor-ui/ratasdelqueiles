@@ -337,7 +337,7 @@ if ($es_junta) {
                 <span class="w-2 h-2 rounded-full bg-tertiary-container animate-pulse"></span> Temporada Activa
             </span>
             <?php if($es_superadmin): ?>
-                <a href="formulario.php" class="px-3 py-1 bg-primary-container text-black font-label-sm uppercase rounded border border-black hover:bg-primary">+ Nueva</a>
+                <a href="nueva_salida.php" class="px-3 py-1 bg-primary-container text-black font-label-sm uppercase rounded border border-black hover:bg-primary">+ Nueva</a>
             <?php endif; ?>
         </div>
     </div>
@@ -465,7 +465,7 @@ if ($es_junta) {
                                     <?php if ($ya_apuntado): ?>
                                         <a href="apuntarse.php?salida_id=<?php echo $salida['id']; ?>" class="text-error font-label-sm uppercase hover:underline text-xs">❌ Ya no voy</a>
                                     <?php else: ?>
-                                        <a href="formulario_apuntarse.php?salida_id=<?php echo $salida['id']; ?>" class="text-primary font-label-sm uppercase hover:underline text-xs">📌 Apuntarse</a>
+                                        <a href="apuntarse_salida.php?salida_id=<?php echo $salida['id']; ?>" class="text-primary font-label-sm uppercase hover:underline text-xs">📌 Apuntarse</a>
                                     <?php endif; ?>
                                 <?php else: ?>
                                     <span class="text-secondary font-label-sm uppercase text-xs">🔒 Inicia sesión</span>

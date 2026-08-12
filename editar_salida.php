@@ -2,18 +2,93 @@
 session_start();
 include 'conexion.php';
 
-// 🔐 Solo el admin (superadmin) puede editar salidas
+// 🔐 Solo el admin (superadmin) puede editar salidas[cite: 18]
 $es_superadmin = (isset($_SESSION['usuario_email']) && $_SESSION['usuario_email'] == 'admin@club.com');
 if (!isset($_SESSION['rol']) || $_SESSION['rol'] != 'junta' || !$es_superadmin) {
     header("Location: salidas.php");
     exit;
 }
 
-$id = $_GET['id'];
-$sql = "SELECT * FROM salidas WHERE id = $id";
-$resultado = $conexion->query($sql);
-$fila = $resultado->fetch_assoc();
-if (!$fila) {
+// =========================================================================
+// 1. PROCESAR EL FORMULARIO (Si se ha enviado por POST)[cite: 17]
+// =========================================================================
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $id = $_POST['id'];
+    $destino = $_POST['destino'];
+    $fecha = $_POST['fecha_salida'];
+    $hora = $_POST['hora_quedada'];
+    $punto = $_POST['punto_encuentro'];
+    $descripcion = $_POST['descripcion'];
+    $responsable = $_POST['responsable'];
+    $imagen_antigua = $_POST['imagen_antigua'];
+
+    $nombre_imagen = $imagen_antigua;
+    
+    if (isset($_FILES['imagen']) && $_FILES['imagen']['error'] == 0) {
+        $archivo = $_FILES['imagen'];
+        $extension = strtolower(pathinfo($archivo['name'], PATHINFO_EXTENSION));
+        $tipos_permitidos = ['jpg', 'jpeg', 'png', 'webp'];
+        
+        if (in_array($extension, $tipos_permitidos)) {
+            // --- CLOUDINARY UPLOAD ---
+            $cloud_name = getenv('CLOUDINARY_CLOUD_NAME');
+            $api_key = getenv('CLOUDINARY_API_KEY');
+            $api_secret = getenv('CLOUDINARY_API_SECRET');
+            $timestamp = time();
+            $signature = sha1("folder=ratas_salidas&timestamp=" . $timestamp . $api_secret);
+
+            $ch = curl_init("https://api.cloudinary.com/v1_1/{$cloud_name}/image/upload");
+            $cfile = new CURLFile($archivo['tmp_name']);
+            $data = [
+                'file' => $cfile, 'api_key' => $api_key, 'timestamp' => $timestamp,
+                'signature' => $signature, 'folder' => 'ratas_salidas'
+            ];
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // <--- AÑADIR ESTO PARA LOCAL
+            $respuesta = curl_exec($ch);
+    
+            
+            $json = json_decode($respuesta, true);
+            if (isset($json['secure_url'])) {
+                $nombre_imagen = $json['secure_url'];
+            }
+        }
+    }
+
+    $sql_update = "UPDATE salidas SET 
+            destino = '$destino', 
+            fecha_salida = '$fecha', 
+            hora_quedada = '$hora', 
+            punto_encuentro = '$punto', 
+            descripcion = '$descripcion',
+            responsable = '$responsable',
+            imagen = '$nombre_imagen'
+            WHERE id = $id";
+
+    if ($conexion->query($sql_update) === TRUE) {
+        header("Location: salidas.php");
+        exit;
+    } else {
+        $error_mensaje = "Error al actualizar: " . $conexion->error;
+    }
+}
+
+// =========================================================================
+// 2. CARGAR DATOS PARA EL FORMULARIO (Si entramos por GET)[cite: 18]
+// =========================================================================
+if (isset($_GET['id'])) {
+    $id = $_GET['id'];
+    $sql = "SELECT * FROM salidas WHERE id = $id";
+    $resultado = $conexion->query($sql);
+    $fila = $resultado->fetch_assoc();
+    if (!$fila) {
+        header("Location: salidas.php");
+        exit;
+    }
+} else if (!isset($_POST['id'])) {
+    // Si no hay ID por GET ni por POST, echamos al usuario a salidas
     header("Location: salidas.php");
     exit;
 }
@@ -83,23 +158,6 @@ if (!$fila) {
                         "surface-bright": "#393939",
                         "secondary-container": "#484949",
                         "on-surface": "#e5e2e1"
-                    },
-                    borderRadius: { "DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem" },
-                    spacing: { "unit": "4px", "gutter": "16px", "container-max": "1200px", "margin-mobile": "20px", "margin-desktop": "40px" },
-                    fontFamily: {
-                        "headline-xl": ["Anybody"], "headline-lg": ["Anybody"], "headline-md": ["Anybody"],
-                        "label-sm": ["JetBrains Mono"], "body-lg": ["Hanken Grotesk"], "label-md": ["JetBrains Mono"],
-                        "body-md": ["Hanken Grotesk"], "headline-lg-mobile": ["Anybody"]
-                    },
-                    fontSize: {
-                        "headline-xl": ["48px", { "lineHeight": "52px", "letterSpacing": "-0.02em", "fontWeight": "800" }],
-                        "headline-lg": ["32px", { "lineHeight": "38px", "fontWeight": "700" }],
-                        "headline-md": ["24px", { "lineHeight": "30px", "fontWeight": "600" }],
-                        "label-sm": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
-                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
-                        "label-md": ["14px", { "lineHeight": "20px", "fontWeight": "500" }],
-                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
-                        "headline-lg-mobile": ["28px", { "lineHeight": "34px", "fontWeight": "700" }]
                     }
                 }
             }
@@ -180,18 +238,6 @@ if (!$fila) {
         <?php if(isset($_SESSION['rol']) && $_SESSION['rol'] == 'junta'): ?>
             <a class="flex items-center gap-3 text-on-surface-variant hover:text-primary hover:bg-surface-container-high rounded-lg p-3" href="actas.php"><span class="material-symbols-outlined">description</span> Actas</a>
         <?php endif; ?>
-        <?php if(isset($_SESSION['rol']) && $_SESSION['rol'] == 'junta'): ?>
-            <a class="flex items-center gap-3 text-on-surface-variant hover:text-primary hover:bg-surface-container-high rounded-lg p-3" href="estatutos.php"><span class="material-symbols-outlined">gavel</span> Estatutos</a>
-        <?php endif; ?>
-        <?php if(isset($_SESSION['rol']) && $_SESSION['rol'] == 'junta'): ?>
-            <?php $count = $conexion->query("SELECT COUNT(*) as total FROM usuarios WHERE aprobado=0")->fetch_assoc()['total']; ?>
-            <a class="flex items-center gap-3 text-on-surface-variant hover:text-primary hover:bg-surface-container-high rounded-lg p-3 relative" href="admin_usuarios.php">
-                <span class="material-symbols-outlined">groups</span> Socios
-                <?php if($count > 0): ?>
-                    <span class="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full px-2 py-0.5"><?php echo $count; ?></span>
-                <?php endif; ?>
-            </a>
-        <?php endif; ?>
     </nav>
 </aside>
 
@@ -209,33 +255,38 @@ if (!$fila) {
     </div>
 
     <div class="bg-surface-container rounded-xl chrome-border p-6 md:p-8">
-        <form action="actualizar_salida.php" method="POST" enctype="multipart/form-data" class="space-y-5">
-            <input type="hidden" name="id" value="<?php echo $fila['id']; ?>">
-            <input type="hidden" name="imagen_antigua" value="<?php echo $fila['imagen']; ?>">
+        <?php if(isset($error_mensaje)): ?>
+            <div class="bg-error-container text-on-error-container p-4 rounded mb-4"><?php echo $error_mensaje; ?></div>
+        <?php endif; ?>
+
+        <!-- NOTA: El action ahora apunta a sí mismo (editar_salida.php) -->
+        <form action="editar_salida.php" method="POST" enctype="multipart/form-data" class="space-y-5">
+            <input type="hidden" name="id" value="<?php echo htmlspecialchars($fila['id']); ?>">
+            <input type="hidden" name="imagen_antigua" value="<?php echo htmlspecialchars($fila['imagen']); ?>">
 
             <div>
                 <label class="label-dark" for="destino">Destino *</label>
-                <input type="text" name="destino" id="destino" value="<?php echo $fila['destino']; ?>" class="input-dark" required>
+                <input type="text" name="destino" id="destino" value="<?php echo htmlspecialchars($fila['destino']); ?>" class="input-dark" required>
             </div>
             <div>
                 <label class="label-dark" for="fecha_salida">Fecha *</label>
-                <input type="date" name="fecha_salida" id="fecha_salida" value="<?php echo $fila['fecha_salida']; ?>" class="input-dark" required>
+                <input type="date" name="fecha_salida" id="fecha_salida" value="<?php echo htmlspecialchars($fila['fecha_salida']); ?>" class="input-dark" required>
             </div>
             <div>
                 <label class="label-dark" for="hora_quedada">Hora *</label>
-                <input type="time" name="hora_quedada" id="hora_quedada" value="<?php echo $fila['hora_quedada']; ?>" class="input-dark" required>
+                <input type="time" name="hora_quedada" id="hora_quedada" value="<?php echo htmlspecialchars($fila['hora_quedada']); ?>" class="input-dark" required>
             </div>
             <div>
                 <label class="label-dark" for="punto_encuentro">Punto de encuentro</label>
-                <input type="text" name="punto_encuentro" id="punto_encuentro" value="<?php echo $fila['punto_encuentro']; ?>" class="input-dark">
+                <input type="text" name="punto_encuentro" id="punto_encuentro" value="<?php echo htmlspecialchars($fila['punto_encuentro']); ?>" class="input-dark">
             </div>
             <div>
                 <label class="label-dark" for="descripcion">Descripción</label>
-                <textarea name="descripcion" id="descripcion" rows="5" class="input-dark"><?php echo $fila['descripcion']; ?></textarea>
+                <textarea name="descripcion" id="descripcion" rows="5" class="input-dark"><?php echo htmlspecialchars($fila['descripcion']); ?></textarea>
             </div>
             <div>
                 <label class="label-dark" for="responsable">Responsable de la salida</label>
-                <input type="text" name="responsable" id="responsable" value="<?php echo $fila['responsable']; ?>" class="input-dark" placeholder="Ej: Juan Pérez">
+                <input type="text" name="responsable" id="responsable" value="<?php echo htmlspecialchars($fila['responsable']); ?>" class="input-dark" placeholder="Ej: Juan Pérez">
             </div>
             <div>
                 <label class="label-dark">Imagen actual</label>
@@ -262,35 +313,10 @@ if (!$fila) {
         </form>
     </div>
 </main>
-
-<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-unit pb-safe h-20 bg-surface-container border-t border-outline-variant">
-    <a class="flex flex-col items-center justify-center text-on-surface-variant p-1" href="index.php"><span class="material-symbols-outlined">home_app_logo</span><span class="font-label-sm uppercase text-xs">Home</span></a>
-    <a class="flex flex-col items-center justify-center text-primary-container bg-on-primary-container/10 rounded-xl p-1" href="salidas.php"><span class="material-symbols-outlined" style="font-variation-settings:'FILL'1;">motorcycle</span><span class="font-label-sm uppercase text-xs">Salidas</span></a>
-    <?php if(isset($_SESSION['rol']) && $_SESSION['rol'] == 'junta'): ?>
-        <a class="flex flex-col items-center justify-center text-on-surface-variant p-1" href="actas.php"><span class="material-symbols-outlined">description</span><span class="font-label-sm uppercase text-xs">Actas</span></a>
-    <?php endif; ?>
-    <?php if(isset($_SESSION['rol']) && $_SESSION['rol'] == 'junta'): ?>
-        <a class="flex flex-col items-center justify-center text-on-surface-variant p-1" href="estatutos.php"><span class="material-symbols-outlined">gavel</span><span class="font-label-sm uppercase text-xs">Estatutos</span></a>
-    <?php endif; ?>
-    <?php if(isset($_SESSION['rol']) && $_SESSION['rol'] == 'junta'): ?>
-        <a class="flex flex-col items-center justify-center text-on-surface-variant p-1 relative" href="admin_usuarios.php">
-            <span class="material-symbols-outlined">groups</span><span class="font-label-sm uppercase text-xs">Socios</span>
-            <?php if($count > 0): ?>
-                <span class="absolute -top-1 -right-1 w-5 h-5 bg-red-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-background"><?php echo $count; ?></span>
-            <?php endif; ?>
-        </a>
-    <?php endif; ?>
-</nav>
 <script>
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-            navigator.serviceWorker.register('sw.js')
-                .then(registration => {
-                    console.log('ServiceWorker registrado con éxito', registration.scope);
-                })
-                .catch(error => {
-                    console.log('Fallo al registrar ServiceWorker', error);
-                });
+            navigator.serviceWorker.register('sw.js');
         });
     }
 </script>

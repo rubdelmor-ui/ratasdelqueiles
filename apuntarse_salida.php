@@ -2,13 +2,64 @@
 session_start();
 include 'conexion.php';
 
+// 1. Verificar sesión activa (cualquier usuario logueado puede apuntarse)[cite: 28, 34]
 if (!isset($_SESSION['usuario_id'])) {
     header("Location: login.php");
     exit;
 }
 
+$usuario_id = $_SESSION['usuario_id'];
+
+// =========================================================================
+// 2. PROCESAR EL FORMULARIO (Si se ha enviado por POST)[cite: 34]
+// =========================================================================
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $salida_id = intval($_POST['salida_id']);
+    $con_acompanantes = isset($_POST['acompanantes']) && $_POST['acompanantes'] == 1;
+    $nombres_acompanantes = isset($_POST['acompanante']) ? $_POST['acompanante'] : [];
+
+    // Validar que la salida existe
+    $sql_check = "SELECT id FROM salidas WHERE id = $salida_id";
+    if ($conexion->query($sql_check)->num_rows == 0) {
+        header("Location: salidas.php");
+        exit;
+    }
+
+    // Insertar la inscripción principal del socio[cite: 34]
+    $sql_insc = "INSERT INTO inscripciones (salida_id, usuario_id) VALUES ($salida_id, $usuario_id)";
+    if ($conexion->query($sql_insc) === TRUE) {
+        $inscripcion_id = $conexion->insert_id;
+        
+        // Si hay acompañantes, insertarlos uno a uno[cite: 34]
+        if ($con_acompanantes && !empty($nombres_acompanantes)) {
+            foreach ($nombres_acompanantes as $nombre) {
+                $nombre = trim($nombre);
+                if (!empty($nombre)) {
+                    // Evitamos inyección SQL básica
+                    $nombre_seguro = $conexion->real_escape_string($nombre);
+                    $sql_acomp = "INSERT INTO acompanantes (inscripcion_id, nombre) VALUES ($inscripcion_id, '$nombre_seguro')";
+                    $conexion->query($sql_acomp);
+                }
+            }
+        }
+        header("Location: salidas.php");
+        exit;
+    } else {
+        $error_mensaje = "Error al apuntarse: " . $conexion->error;
+    }
+}
+
+// =========================================================================
+// 3. CARGAR DATOS PARA EL FORMULARIO (Si entramos por GET)[cite: 28]
+// =========================================================================
+if (!isset($_GET['salida_id'])) {
+    header("Location: salidas.php");
+    exit;
+}
+
 $salida_id = intval($_GET['salida_id']);
 
+// Obtener el nombre del destino para mostrarlo en el formulario[cite: 28]
 $sql_check = "SELECT destino FROM salidas WHERE id = $salida_id";
 $res_check = $conexion->query($sql_check);
 if ($res_check->num_rows == 0) {
@@ -17,9 +68,11 @@ if ($res_check->num_rows == 0) {
 }
 $destino = $res_check->fetch_assoc()['destino'];
 
-$check_insc = "SELECT id FROM inscripciones WHERE salida_id = $salida_id AND usuario_id = " . $_SESSION['usuario_id'];
+// Comprobar si ya está inscrito para no mostrar el formulario de nuevo[cite: 28]
+$check_insc = "SELECT id FROM inscripciones WHERE salida_id = $salida_id AND usuario_id = $usuario_id";
 $res_insc = $conexion->query($check_insc);
 if ($res_insc->num_rows > 0) {
+    // Si ya está apuntado, lo devolvemos a salidas (allí verá el botón "Ya no voy")
     header("Location: salidas.php");
     exit;
 }
@@ -54,12 +107,19 @@ if ($res_insc->num_rows > 0) {
         .radio-label input[type="radio"] { accent-color: #ff5719; width: 1.1rem; height: 1.1rem; }
     </style>
 </head>
-<body>
-    <div class="bg-surface rounded-xl chrome-border p-8 max-w-lg w-full">
+<body class="noise-bg">
+    <div class="bg-surface rounded-xl chrome-border p-8 max-w-lg w-full relative z-10">
+        
+        <?php if(isset($error_mensaje)): ?>
+            <div class="bg-red-900/50 text-red-200 p-4 rounded mb-4 text-sm border border-red-500/30"><?php echo $error_mensaje; ?></div>
+        <?php endif; ?>
+
         <h2 class="font-headline-lg text-on-background uppercase mb-1">Apuntarse a</h2>
         <p class="text-primary font-headline-md text-xl font-bold"><?php echo htmlspecialchars($destino); ?></p>
         <p class="text-secondary text-sm mt-4">¿Vienes con acompañantes?</p>
-        <form action="guardar_apuntarse.php" method="POST">
+        
+        <!-- Fíjate que el action ahora apunta al mismo archivo -->
+        <form action="apuntarse_salida.php" method="POST">
             <input type="hidden" name="salida_id" value="<?php echo $salida_id; ?>">
             <div class="mt-3 flex gap-6">
                 <label class="radio-label text-on-background">
@@ -84,6 +144,7 @@ if ($res_insc->num_rows > 0) {
             <a href="salidas.php" class="block text-center text-secondary hover:text-primary transition-colors mt-4 text-sm uppercase font-label-md">⬅ Volver a salidas</a>
         </form>
     </div>
+    
     <script>
         function toggleAcompanantes() {
             const radios = document.querySelectorAll('input[name="acompanantes"]');
@@ -102,20 +163,15 @@ if ($res_insc->num_rows > 0) {
                 container.appendChild(div);
             }
         }
+        // Inicializar el estado de los campos al cargar la página
         toggleAcompanantes();
     </script>
     <script>
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-            navigator.serviceWorker.register('sw.js')
-                .then(registration => {
-                    console.log('ServiceWorker registrado con éxito', registration.scope);
-                })
-                .catch(error => {
-                    console.log('Fallo al registrar ServiceWorker', error);
-                });
+            navigator.serviceWorker.register('sw.js');
         });
     }
-</script>
+    </script>
 </body>
 </html>
