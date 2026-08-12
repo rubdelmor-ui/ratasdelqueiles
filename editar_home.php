@@ -14,7 +14,6 @@ if (!isset($_SESSION['rol']) || $_SESSION['rol'] != 'junta' || !$es_superadmin) 
 // =========================================================================
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $contenido = $_POST['contenido'];
-    $texto_imagen = $_POST['texto_imagen'] ?? '';
 
     // Obtener imagen actual de la BD
     $sql_img = "SELECT imagen FROM contenido_home WHERE seccion = 'bienvenida'";
@@ -39,7 +38,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $api_secret = getenv('CLOUDINARY_API_SECRET');
             $timestamp = time();
             
-            // CORREGIDO: Incluir la carpeta 'ratas_home' dentro de la firma de seguridad
             $signature = sha1("folder=ratas_home&timestamp=" . $timestamp . $api_secret);
 
             $ch = curl_init("https://api.cloudinary.com/v1_1/{$cloud_name}/image/upload");
@@ -52,7 +50,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // Evita errores SSL en local
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
             $respuesta = curl_exec($ch);
             curl_close($ch);
             
@@ -68,20 +66,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 
     if (!isset($error_mensaje)) {
-        // Evitar inyección SQL
         $contenido = $conexion->real_escape_string($contenido);
-        $texto_imagen = $conexion->real_escape_string($texto_imagen);
 
-        // Actualizar o insertar
+        // Actualizar o insertar solo con los campos seguros
         $sql_update = "UPDATE contenido_home SET 
                 contenido = '$contenido',
-                texto_imagen = '$texto_imagen',
                 imagen = '$nombre_imagen'
                 WHERE seccion = 'bienvenida'";
 
         if ($conexion->query($sql_update) === TRUE) {
             if ($conexion->affected_rows == 0) {
-                $sql_insert = "INSERT INTO contenido_home (seccion, contenido, texto_imagen, imagen) VALUES ('bienvenida', '$contenido', '$texto_imagen', '$nombre_imagen')";
+                $sql_insert = "INSERT INTO contenido_home (seccion, contenido, imagen) VALUES ('bienvenida', '$contenido', '$nombre_imagen')";
                 $conexion->query($sql_insert);
             }
             header("Location: editar_home.php?ok=1");
@@ -100,11 +95,9 @@ $resultado = $conexion->query($sql);
 if ($resultado && $resultado->num_rows > 0) {
     $fila = $resultado->fetch_assoc();
     $contenido_actual = $fila['contenido'] ?? '';
-    $texto_imagen_actual = $fila['texto_imagen'] ?? '';
     $imagen_actual = $fila['imagen'] ?? null;
 } else {
     $contenido_actual = '';
-    $texto_imagen_actual = '';
     $imagen_actual = null;
 }
 ?>
@@ -185,10 +178,6 @@ if ($resultado && $resultado->num_rows > 0) {
             <div>
                 <label class="label-dark" for="contenido">Texto de bienvenida</label>
                 <textarea name="contenido" id="contenido" class="input-dark" rows="6"><?php echo htmlspecialchars($contenido_actual); ?></textarea>
-            </div>
-            <div>
-                <label class="label-dark" for="texto_imagen">Texto encima de la imagen</label>
-                <textarea name="texto_imagen" id="texto_imagen" class="input-dark" rows="4"><?php echo htmlspecialchars($texto_imagen_actual); ?></textarea>
             </div>
 
             <div class="bg-surface-container-high p-4 rounded mt-4">
