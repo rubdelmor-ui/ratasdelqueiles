@@ -20,61 +20,49 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $url = $_POST['url'] ?? '';
                 $imagen = '';
 
-                // Manejar subida de imagen (si se seleccionó)
-                if ($_FILES['imagen']['error'] == 0 && in_array($_FILES['imagen']['type'], ['image/jpeg', 'image/png', 'image/gif', 'image/webp'])) {
-                    $ext = pathinfo($_FILES['imagen']['name'], PATHINFO_EXTENSION);
-                    $imagen = 'home_' . time() . '.' . $ext;
-                    move_uploaded_file($_FILES['imagen']['tmp_name'], 'uploads/home/' . $imagen);
+                // --- SUBIDA A CLOUDINARY ---
+                if (isset($_FILES['imagen']) && $_FILES['imagen']['error'] == 0) {
+                    $archivo = $_FILES['imagen'];
+                    $cloud_name = getenv('CLOUDINARY_CLOUD_NAME');
+                    $api_key = getenv('CLOUDINARY_API_KEY');
+                    $api_secret = getenv('CLOUDINARY_API_SECRET');
+                    $timestamp = time();
+                    $signature = sha1("folder=ratas_home&timestamp=" . $timestamp . $api_secret);
+
+                    $ch = curl_init("https://api.cloudinary.com/v1_1/{$cloud_name}/image/upload");
+                    $cfile = new CURLFile($archivo['tmp_name']);
+                    $data = [
+                        'file' => $cfile, 'api_key' => $api_key, 'timestamp' => $timestamp,
+                        'signature' => $signature, 'folder' => 'ratas_home'
+                    ];
+                    curl_setopt($ch, CURLOPT_POST, true);
+                    curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                    $respuesta = curl_exec($ch);
+                    curl_close($ch);
+                    
+                    $json = json_decode($respuesta, true);
+                    if (isset($json['secure_url'])) {
+                        $imagen = $json['secure_url']; 
+                    }
                 }
+
+                $titulo = $conexion->real_escape_string($titulo);
+                $contenido = $conexion->real_escape_string($contenido);
+                $url = $conexion->real_escape_string($url);
 
                 $sql = "INSERT INTO home_content (tipo, titulo, contenido, url, imagen, orden) 
                         VALUES ('$tipo', '$titulo', '$contenido', '$url', '$imagen', (SELECT COALESCE(MAX(orden),0)+1 FROM home_content))";
                 $conexion->query($sql);
                 break;
 
-            case 'edit':
-                $id = intval($_POST['id']);
-                $tipo = $_POST['tipo'];
-                $titulo = $_POST['titulo'] ?? '';
-                $contenido = $_POST['contenido'] ?? '';
-                $url = $_POST['url'] ?? '';
-                $imagen = $_POST['imagen_actual'] ?? '';
-
-                if ($_FILES['imagen']['error'] == 0 && in_array($_FILES['imagen']['type'], ['image/jpeg', 'image/png', 'image/gif', 'image/webp'])) {
-                    // Borrar imagen antigua si existe
-                    if (!empty($imagen) && file_exists('uploads/home/' . $imagen)) {
-                        unlink('uploads/home/' . $imagen);
-                    }
-                    $ext = pathinfo($_FILES['imagen']['name'], PATHINFO_EXTENSION);
-                    $imagen = 'home_' . time() . '.' . $ext;
-                    move_uploaded_file($_FILES['imagen']['tmp_name'], 'uploads/home/' . $imagen);
-                }
-
-                $sql = "UPDATE home_content SET 
-                        tipo = '$tipo', 
-                        titulo = '$titulo', 
-                        contenido = '$contenido', 
-                        url = '$url', 
-                        imagen = '$imagen' 
-                        WHERE id = $id";
-                $conexion->query($sql);
-                break;
-
             case 'delete':
                 $id = intval($_POST['id']);
-                // Obtener imagen para borrar
-                $sql_img = "SELECT imagen FROM home_content WHERE id = $id";
-                $res_img = $conexion->query($sql_img);
-                if ($row = $res_img->fetch_assoc()) {
-                    if (!empty($row['imagen']) && file_exists('uploads/home/' . $row['imagen'])) {
-                        unlink('uploads/home/' . $row['imagen']);
-                    }
-                }
                 $conexion->query("DELETE FROM home_content WHERE id = $id");
                 break;
 
             case 'reorder':
-                // Actualizar órdenes (recibimos array de IDs en orden)
                 $ordenes = $_POST['orden'] ?? [];
                 foreach ($ordenes as $orden => $id) {
                     $id = intval($id);
@@ -160,7 +148,7 @@ $content = $conexion->query($sql_content);
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-secondary text-sm uppercase font-label-md mb-1" for="tipo">Tipo</label>
-                    <select name="tipo" id="tipo" class="input-dark" onchange="toggleFields()">
+                    <select name="tipo" id="tipo" class="input-dark">
                         <option value="texto">Texto</option>
                         <option value="imagen">Imagen</option>
                         <option value="enlace">Enlace</option>
@@ -205,14 +193,12 @@ $content = $conexion->query($sql_content);
                     <?php if (!empty($row['url'])): ?>
                         <div class="text-xs text-primary truncate">🔗 <?php echo htmlspecialchars($row['url']); ?></div>
                     <?php endif; ?>
-                    <?php if (!empty($row['imagen']) && file_exists('uploads/home/' . $row['imagen'])): ?>
-                        <img src="uploads/home/<?php echo $row['imagen']; ?>" class="mt-2 max-h-20 rounded border border-outline-variant" alt="Imagen">
+                    <?php if (!empty($row['imagen']) && strpos($row['imagen'], 'http') === 0): ?>
+                        <img src="<?php echo $row['imagen']; ?>" class="mt-2 max-h-20 rounded border border-outline-variant" alt="Imagen">
                     <?php endif; ?>
                 </div>
                 <div class="flex gap-2 flex-wrap">
-                    <!-- Botón Editar (redirige a editar_bloque.php) -->
                     <a href="editar_bloque.php?id=<?php echo $row['id']; ?>" class="btn-primary text-sm px-3 py-1">✏️ Editar</a>
-                    <!-- Botón Eliminar (formulario POST) -->
                     <form action="" method="POST" class="inline">
                         <input type="hidden" name="action" value="delete">
                         <input type="hidden" name="id" value="<?php echo $row['id']; ?>">
@@ -223,7 +209,6 @@ $content = $conexion->query($sql_content);
         <?php endwhile; ?>
     </div>
 
-    <!-- Botón para reordenar (solo si hay más de un bloque) -->
     <?php if ($content->num_rows > 1): ?>
         <form action="" method="POST" id="reorderForm">
             <input type="hidden" name="action" value="reorder">
@@ -235,14 +220,6 @@ $content = $conexion->query($sql_content);
 </main>
 
 <script>
-    // Mostrar/ocultar campos según el tipo
-    function toggleFields() {
-        const tipo = document.getElementById('tipo').value;
-        const urlField = document.getElementById('url').closest('.grid').querySelector('div:last-child');
-        // Podríamos ocultar/mostrar según necesidad, pero lo dejamos visible siempre por simplicidad.
-    }
-
-    // Reordenar con drag & drop (usando HTML5 Drag and Drop)
     document.addEventListener('DOMContentLoaded', function() {
         const container = document.getElementById('sortable');
         if (!container) return;
@@ -277,7 +254,6 @@ $content = $conexion->query($sql_content);
             }
         });
 
-        // Manejar envío del orden
         document.getElementById('reorderForm')?.addEventListener('submit', function(e) {
             const items = container.querySelectorAll('.card');
             const ids = [];
@@ -288,19 +264,6 @@ $content = $conexion->query($sql_content);
             document.getElementById('ordenInput').value = ids.join(',');
         });
     });
-</script>
-<script>
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('sw.js')
-                .then(registration => {
-                    console.log('ServiceWorker registrado con éxito', registration.scope);
-                })
-                .catch(error => {
-                    console.log('Fallo al registrar ServiceWorker', error);
-                });
-        });
-    }
 </script>
 </body>
 </html>

@@ -22,16 +22,39 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $titulo = $_POST['titulo'] ?? '';
     $contenido = $_POST['contenido'] ?? '';
     $url = $_POST['url'] ?? '';
-    $imagen = $_POST['imagen_actual'] ?? '';
+    $imagen = $_POST['imagen_actual'] ?? ''; // Mantiene la URL de Cloudinary actual por defecto
 
-    if ($_FILES['imagen']['error'] == 0 && in_array($_FILES['imagen']['type'], ['image/jpeg', 'image/png', 'image/gif', 'image/webp'])) {
-        if (!empty($imagen) && file_exists('uploads/home/' . $imagen)) {
-            unlink('uploads/home/' . $imagen);
+    // --- MANEJO DE NUEVA IMAGEN A CLOUDINARY ---
+    if (isset($_FILES['imagen']) && $_FILES['imagen']['error'] == 0) {
+        $archivo = $_FILES['imagen'];
+        $cloud_name = getenv('CLOUDINARY_CLOUD_NAME');
+        $api_key = getenv('CLOUDINARY_API_KEY');
+        $api_secret = getenv('CLOUDINARY_API_SECRET');
+        $timestamp = time();
+        $signature = sha1("folder=ratas_home&timestamp=" . $timestamp . $api_secret);
+
+        $ch = curl_init("https://api.cloudinary.com/v1_1/{$cloud_name}/image/upload");
+        $cfile = new CURLFile($archivo['tmp_name']);
+        $data = [
+            'file' => $cfile, 'api_key' => $api_key, 'timestamp' => $timestamp,
+            'signature' => $signature, 'folder' => 'ratas_home'
+        ];
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        $respuesta = curl_exec($ch);
+        curl_close($ch);
+        
+        $json = json_decode($respuesta, true);
+        if (isset($json['secure_url'])) {
+            $imagen = $json['secure_url']; // Nueva URL segura de Cloudinary
         }
-        $ext = pathinfo($_FILES['imagen']['name'], PATHINFO_EXTENSION);
-        $imagen = 'home_' . time() . '.' . $ext;
-        move_uploaded_file($_FILES['imagen']['tmp_name'], 'uploads/home/' . $imagen);
     }
+
+    $titulo = $conexion->real_escape_string($titulo);
+    $contenido = $conexion->real_escape_string($contenido);
+    $url = $conexion->real_escape_string($url);
 
     $sql = "UPDATE home_content SET 
             tipo = '$tipo', 
@@ -79,7 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <div class="bg-surface rounded-xl chrome-border p-6 max-w-2xl w-full">
         <h2 class="font-headline-lg text-headline-lg text-on-background uppercase tracking-tight">✏️ Editar bloque</h2>
         <form action="" method="POST" enctype="multipart/form-data">
-            <input type="hidden" name="imagen_actual" value="<?php echo $bloque['imagen']; ?>">
+            <input type="hidden" name="imagen_actual" value="<?php echo htmlspecialchars($bloque['imagen']); ?>">
             <div class="mt-4">
                 <label class="block text-secondary text-sm uppercase font-label-md mb-1" for="tipo">Tipo</label>
                 <select name="tipo" id="tipo" class="input-dark">
@@ -103,10 +126,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             </div>
             <div class="mt-4">
                 <label class="block text-secondary text-sm uppercase font-label-md mb-1">Imagen actual</label>
-                <?php if (!empty($bloque['imagen']) && file_exists('uploads/home/' . $bloque['imagen'])): ?>
-                    <img src="uploads/home/<?php echo $bloque['imagen']; ?>" class="max-h-40 rounded border border-outline-variant mt-2">
+                <?php if (!empty($bloque['imagen']) && strpos($bloque['imagen'], 'http') === 0): ?>
+                    <img src="<?php echo $bloque['imagen']; ?>" class="max-h-40 rounded border border-outline-variant mt-2">
                 <?php else: ?>
-                    <p class="text-secondary text-sm">Sin imagen</p>
+                    <p class="text-secondary text-sm">Sin imagen en la nube</p>
                 <?php endif; ?>
             </div>
             <div class="mt-4">
