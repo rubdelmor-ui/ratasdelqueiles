@@ -9,12 +9,14 @@ if (!isset($_SESSION['rol']) || $_SESSION['rol'] != 'junta' || $_SESSION['usuari
     exit;
 }
 
+$error_mensaje = null;
+
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $titulo = $_POST['titulo'];
     $fecha = $_POST['fecha_reunion'];
     $asistentes = $_POST['asistentes'];
     $autor = $_POST['autor'];
-    $nombre_unico = NULL;
+    $nombre_unico = ''; // Dejamos string vacío por defecto si no sube nada
 
     if (isset($_FILES['archivo_pdf']) && $_FILES['archivo_pdf']['error'] == 0) {
         $archivo = $_FILES['archivo_pdf'];
@@ -27,11 +29,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $api_secret = getenv('CLOUDINARY_API_SECRET');
             $timestamp = time();
             
-            // CORREGIDO: Añadido folder=ratas_actas_pdf a la firma
+            // Firma y configuración correcta
             $signature = sha1("folder=ratas_actas_pdf&timestamp=" . $timestamp . $api_secret);
 
             $ch = curl_init("https://api.cloudinary.com/v1_1/{$cloud_name}/raw/upload");
-            $cfile = new CURLFile($archivo['tmp_name']);
+            // Pasamos los datos extra para que Cloudinary procese bien el archivo
+            $cfile = new CURLFile($archivo['tmp_name'], $archivo['type'], $archivo['name']);
             $data = [
                 'file' => $cfile, 'api_key' => $api_key, 'timestamp' => $timestamp,
                 'signature' => $signature, 'folder' => 'ratas_actas_pdf'
@@ -39,24 +42,27 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // CORREGIDO: Evita errores SSL
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            
             $respuesta = curl_exec($ch);
-            curl_close($ch);
+            // Omitimos curl_close($ch); para evitar el aviso de obsolescencia de PHP 8.5
             
             $json = json_decode($respuesta, true);
             if (isset($json['secure_url'])) {
                 $nombre_unico = $json['secure_url']; // URL de Cloudinary
             } else {
-                $error_mensaje = "Error al subir a Cloudinary.";
+                $detalle = isset($json['error']['message']) ? $json['error']['message'] : 'Respuesta desconocida';
+                $error_mensaje = "Cloudinary ha rechazado el PDF. Motivo: " . $detalle;
             }
         } else {
             $error_mensaje = "Solo se permiten archivos PDF.";
         }
     }
 
-    if (!isset($error_mensaje)) {
-        $sql = "INSERT INTO actas (titulo, fecha_reunion, autor, firmas, archivo_pdf) 
-                VALUES ('$titulo', '$fecha', '$autor', '$asistentes', '$nombre_unico')";
+    if (!$error_mensaje) {
+        // CORRECCIÓN: Añadimos 'texto_acta' a la consulta y le pasamos un string vacío ('')
+        $sql = "INSERT INTO actas (titulo, fecha_reunion, autor, firmas, archivo_pdf, texto_acta) 
+                VALUES ('$titulo', '$fecha', '$autor', '$asistentes', '$nombre_unico', '')";
         
         if ($conexion->query($sql) === TRUE) {
             $conexion->query("UPDATE configuracion SET valor = NOW() WHERE clave = 'ultima_acta'");
@@ -95,8 +101,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <div class="max-w-2xl mx-auto">
         <h2 class="text-2xl font-bold uppercase mb-6 text-primary">➕ Nueva Acta</h2>
         
-        <?php if(isset($error_mensaje)): ?>
-            <div class="bg-red-900/50 text-red-200 p-4 rounded mb-4"><?php echo $error_mensaje; ?></div>
+        <?php if($error_mensaje): ?>
+            <div class="bg-red-900/50 text-red-200 p-4 rounded mb-4 font-bold border border-red-500/30">
+                <?php echo $error_mensaje; ?>
+            </div>
         <?php endif; ?>
 
         <div class="bg-surface-container rounded-xl border border-outline-variant p-6">

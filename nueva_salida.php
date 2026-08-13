@@ -2,15 +2,17 @@
 session_start();
 include 'conexion.php';
 
-// 🔐 Solo el admin (superadmin) puede crear salidas[cite: 38]
+// 🔐 Solo el admin (superadmin) puede crear salidas
 $es_superadmin = (isset($_SESSION['usuario_email']) && $_SESSION['usuario_email'] == 'admin@club.com');
 if (!isset($_SESSION['rol']) || $_SESSION['rol'] != 'junta' || !$es_superadmin) {
     header("Location: salidas.php");
     exit;
 }
 
+$error_mensaje = null;
+
 // =========================================================================
-// 1. PROCESAR EL FORMULARIO (Si se ha enviado por POST)[cite: 39]
+// 1. PROCESAR EL FORMULARIO (POST)
 // =========================================================================
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $destino = $_POST['destino'];
@@ -22,7 +24,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     $nombre_imagen = NULL;
 
-    // Manejar subida de nueva imagen a Cloudinary[cite: 39]
+    // Manejar subida de nueva imagen a Cloudinary
     if (isset($_FILES['imagen']) && $_FILES['imagen']['error'] == 0) {
         $archivo = $_FILES['imagen'];
         $extension = strtolower(pathinfo($archivo['name'], PATHINFO_EXTENSION));
@@ -34,40 +36,43 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $api_key = getenv('CLOUDINARY_API_KEY');
             $api_secret = getenv('CLOUDINARY_API_SECRET');
             $timestamp = time();
-            $signature = sha1("timestamp=" . $timestamp . $api_secret);
+            
+            // CORRECCIÓN: Incluir la carpeta ratas_salidas en la firma
+            $signature = sha1("folder=ratas_salidas&timestamp=" . $timestamp . $api_secret);
 
             $ch = curl_init("https://api.cloudinary.com/v1_1/{$cloud_name}/image/upload");
-            $cfile = new CURLFile($archivo['tmp_name']);
+            $cfile = new CURLFile($archivo['tmp_name'], $archivo['type'], $archivo['name']);
             
             $data = [
                 'file' => $cfile,
                 'api_key' => $api_key,
                 'timestamp' => $timestamp,
                 'signature' => $signature,
-                'folder' => 'ratas_salidas' // Carpeta en Cloudinary
+                'folder' => 'ratas_salidas' 
             ];
 
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // CORRECCIÓN: Evitar error de SSL en local
             
             $respuesta = curl_exec($ch);
-            curl_close($ch);
+            // CORRECCIÓN: Omitimos curl_close($ch); para evitar el Deprecated warning en PHP 8.5+
             
             $json = json_decode($respuesta, true);
             
             if (isset($json['secure_url'])) {
                 $nombre_imagen = $json['secure_url']; 
             } else {
-                $error_mensaje = "Error al subir la imagen a la nube.";
+                $detalle = isset($json['error']['message']) ? $json['error']['message'] : 'Respuesta desconocida';
+                $error_mensaje = "Cloudinary ha rechazado la imagen. Motivo: " . $detalle;
             }
         } else {
             $error_mensaje = "Formato de imagen no permitido.";
         }
     }
 
-    if (!isset($error_mensaje)) {
-        // Insertar en base de datos[cite: 39]
+    if (!$error_mensaje) {
         // Evitamos inyección SQL
         $destino = $conexion->real_escape_string($destino);
         $punto = $conexion->real_escape_string($punto);
@@ -154,11 +159,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     <div class="bg-surface-container rounded-xl chrome-border p-6 md:p-8">
         
-        <?php if(isset($error_mensaje)): ?>
-            <div class="bg-red-900/50 text-red-200 p-4 rounded mb-4 text-sm border border-red-500/30"><?php echo $error_mensaje; ?></div>
+        <?php if($error_mensaje): ?>
+            <div class="bg-red-900/50 text-red-200 font-bold p-4 rounded mb-4 border border-red-500/30">
+                <?php echo $error_mensaje; ?>
+            </div>
         <?php endif; ?>
 
-        <!-- Fíjate que el action ahora apunta a este mismo archivo -->
         <form action="nueva_salida.php" method="POST" enctype="multipart/form-data" class="space-y-5">
             <div>
                 <label class="label-dark" for="destino">Destino *</label>

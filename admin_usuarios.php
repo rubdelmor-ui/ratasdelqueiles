@@ -67,7 +67,7 @@ if ($es_superadmin) {
             $fila_foto = $res_foto->fetch_assoc();
             $foto = $fila_foto['foto'] ?? null;
             $conexion->query("DELETE FROM usuarios WHERE id = $id");
-            if (!empty($foto) && file_exists('uploads/perfiles/' . $foto)) {
+            if (!empty($foto) && strpos($foto, 'http') !== 0 && file_exists('uploads/perfiles/' . $foto)) {
                 unlink('uploads/perfiles/' . $foto);
             }
         }
@@ -420,8 +420,8 @@ $count = $pendientes->num_rows;
                     <?php while($socio = $pendientes->fetch_assoc()): ?>
                         <div class="card-socio">
                             <div class="flex items-center gap-4">
-                                <?php if (!empty($socio['foto']) && file_exists('uploads/perfiles/' . $socio['foto'])): ?>
-                                    <img src="uploads/perfiles/<?php echo $socio['foto']; ?>" class="foto-socio" alt="Foto">
+                                <?php if (!empty($socio['foto']) && strpos($socio['foto'], 'http') === 0): ?>
+                                    <img src="<?php echo $socio['foto']; ?>" class="foto-socio" alt="Foto">
                                 <?php else: ?>
                                     <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Ccircle cx='30' cy='30' r='30' fill='%232a2a2a'/%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='30' fill='%23666' font-family='Arial'%3E👤%3C/text%3E%3C/svg%3E" class="foto-socio" alt="Sin foto">
                                 <?php endif; ?>
@@ -463,8 +463,8 @@ $count = $pendientes->num_rows;
                     <?php while($socio = $aprobados->fetch_assoc()): ?>
                         <div class="card-socio">
                             <div class="flex items-center gap-4">
-                                <?php if (!empty($socio['foto']) && file_exists('uploads/perfiles/' . $socio['foto'])): ?>
-                                    <img src="uploads/perfiles/<?php echo $socio['foto']; ?>" class="foto-socio" alt="Foto">
+                                <?php if (!empty($socio['foto']) && strpos($socio['foto'], 'http') === 0): ?>
+                                    <img src="<?php echo $socio['foto']; ?>" class="foto-socio" alt="Foto">
                                 <?php else: ?>
                                     <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Ccircle cx='30' cy='30' r='30' fill='%232a2a2a'/%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='30' fill='%23666' font-family='Arial'%3E👤%3C/text%3E%3C/svg%3E" class="foto-socio" alt="Sin foto">
                                 <?php endif; ?>
@@ -547,8 +547,8 @@ $count = $pendientes->num_rows;
                             <tr>
                                 <td class="text-secondary text-sm"><?php echo $socio['id']; ?></td>
                                 <td>
-                                    <?php if (!empty($socio['foto']) && file_exists('uploads/perfiles/' . $socio['foto'])): ?>
-                                        <img src="uploads/perfiles/<?php echo $socio['foto']; ?>" style="width:32px;height:32px;object-fit:cover;border-radius:50%;border:1px solid rgba(255,255,255,0.1);">
+                                    <?php if (!empty($socio['foto']) && strpos($socio['foto'], 'http') === 0): ?>
+                                        <img src="<?php echo $socio['foto']; ?>" style="width:32px;height:32px;object-fit:cover;border-radius:50%;border:1px solid rgba(255,255,255,0.1);">
                                     <?php else: ?>
                                         <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='16' fill='%232a2a2a'/%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='18' fill='%23666' font-family='Arial'%3E👤%3C/text%3E%3C/svg%3E" style="width:32px;height:32px;object-fit:cover;border-radius:50%;">
                                     <?php endif; ?>
@@ -641,4 +641,4 @@ $count = $pendientes->num_rows;
     }
 </script>
 </body>
-</html>
+</html> 

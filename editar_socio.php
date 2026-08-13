@@ -10,7 +10,7 @@ if (!isset($_SESSION['rol']) || $_SESSION['rol'] != 'junta' || !$es_superadmin) 
 }
 
 // =========================================================================
-// 1. PROCESAR EL FORMULARIO (POST)[cite: 25]
+// 1. PROCESAR EL FORMULARIO (POST)
 // =========================================================================
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $id = intval($_POST['id']);
@@ -18,8 +18,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $email = $_POST['email'];
     $cargo = $_POST['cargo'] ?? '';
     $aprobado = intval($_POST['aprobado']);
-    $pregunta_seguridad = $_POST['pregunta_seguridad'] ?? '';
-    $respuesta_seguridad_raw = $_POST['respuesta_seguridad'] ?? '';
 
     // Si es superadmin, permite cambiar rol; si no, mantiene el rol actual
     if ($es_superadmin) {
@@ -29,12 +27,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $res_rol = $conexion->query($sql_rol);
         $fila_rol = $res_rol->fetch_assoc();
         $rol = $fila_rol['rol'];
-    }
-
-    // Manejar respuesta de seguridad
-    $respuesta_seguridad = null;
-    if (!empty($respuesta_seguridad_raw)) {
-        $respuesta_seguridad = password_hash($respuesta_seguridad_raw, PASSWORD_DEFAULT);
     }
 
     // Manejar foto: obtenemos la actual primero
@@ -55,7 +47,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $api_key = getenv('CLOUDINARY_API_KEY');
             $api_secret = getenv('CLOUDINARY_API_SECRET');
             $timestamp = time();
-            $signature = sha1("timestamp=" . $timestamp . $api_secret);
+            
+            // CORREGIDO: Firma de seguridad y carpeta
+            $signature = sha1("folder=ratas_perfiles&timestamp=" . $timestamp . $api_secret);
 
             $ch = curl_init("https://api.cloudinary.com/v1_1/{$cloud_name}/image/upload");
             $cfile = new CURLFile($archivo['tmp_name']);
@@ -66,8 +60,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // Evita error SSL local
             $respuesta = curl_exec($ch);
-            curl_close($ch);
             
             $json = json_decode($respuesta, true);
             if (isset($json['secure_url'])) {
@@ -76,21 +70,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
     }
 
-    // Construir consulta SQL
+    // Construir consulta SQL (Sin intentar editar la pregunta de seguridad secreta)
     $sql_update = "UPDATE usuarios SET 
             nombre = '$nombre',
             email = '$email',
             rol = '$rol',
             cargo = '$cargo',
             aprobado = $aprobado,
-            foto = '$nombre_foto',
-            pregunta_seguridad = '$pregunta_seguridad'";
-
-    if ($respuesta_seguridad !== null) {
-        $sql_update .= ", respuesta_seguridad = '$respuesta_seguridad'";
-    }
-
-    $sql_update .= " WHERE id = $id";
+            foto = '$nombre_foto'
+            WHERE id = $id";
 
     if ($conexion->query($sql_update) === TRUE) {
         header("Location: admin_usuarios.php");
@@ -101,7 +89,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 }
 
 // =========================================================================
-// 2. CARGAR DATOS PARA EL FORMULARIO (GET)[cite: 27]
+// 2. CARGAR DATOS PARA EL FORMULARIO (GET)
 // =========================================================================
 if (isset($_GET['id'])) {
     $id = intval($_GET['id']);
@@ -135,53 +123,14 @@ if (isset($_GET['id'])) {
             theme: {
                 extend: {
                     colors: {
-                        "on-primary-container": "#521300",
                         "primary": "#ffb59e",
-                        "surface-container-highest": "#353534",
                         "error": "#ffb4ab",
-                        "on-primary": "#5e1700",
-                        "on-error": "#690005",
-                        "tertiary-container": "#ff5542",
-                        "inverse-on-surface": "#313030",
                         "surface-container": "#201f1f",
-                        "surface-tint": "#ffb59e",
-                        "on-secondary": "#2f3131",
-                        "primary-fixed": "#ffdbd0",
-                        "on-secondary-container": "#b8b8b8",
-                        "secondary-fixed-dim": "#c6c6c6",
-                        "secondary": "#c6c6c6",
-                        "surface-dim": "#131313",
-                        "primary-container": "#ff5719",
-                        "primary-fixed-dim": "#ffb59e",
-                        "surface-container-low": "#1c1b1b",
-                        "on-tertiary-fixed": "#410000",
-                        "outline": "#ac897e",
-                        "on-secondary-fixed-variant": "#464747",
-                        "error-container": "#93000a",
-                        "on-secondary-fixed": "#1a1c1c",
-                        "on-background": "#e5e2e1",
-                        "tertiary-fixed-dim": "#ffb4a8",
-                        "on-tertiary-container": "#5c0001",
-                        "surface": "#131313",
-                        "secondary-fixed": "#e3e2e2",
-                        "inverse-primary": "#ad3200",
-                        "on-primary-fixed": "#3a0b00",
-                        "on-primary-fixed-variant": "#852400",
-                        "on-surface-variant": "#e6beb2",
-                        "on-error-container": "#ffdad6",
-                        "tertiary-fixed": "#ffdad5",
-                        "on-tertiary-fixed-variant": "#930002",
-                        "surface-container-lowest": "#0e0e0e",
                         "outline-variant": "#5c4037",
                         "surface-container-high": "#2a2a2a",
-                        "surface-variant": "#353534",
                         "background": "#131313",
-                        "tertiary": "#ffb4a8",
-                        "on-tertiary": "#690001",
-                        "inverse-surface": "#e5e2e1",
-                        "surface-bright": "#393939",
-                        "secondary-container": "#484949",
-                        "on-surface": "#e5e2e1"
+                        "on-background": "#e5e2e1",
+                        "secondary": "#c6c6c6"
                     }
                 }
             }
@@ -222,7 +171,7 @@ if (isset($_GET['id'])) {
 <header class="bg-background border-b border-outline-variant flex justify-between items-center w-full px-4 py-2 h-16 sticky top-0 z-50">
     <div class="flex items-center gap-2">
         <img alt="Logo" class="h-8 w-8 object-contain rounded-full border border-outline-variant" src="images/logo2.jpg">
-        <h1 class="font-headline-lg-mobile text-headline-lg-mobile uppercase text-primary tracking-tighter">Ratas del Queiles</h1>
+        <h1 class="font-bold text-xl uppercase text-primary tracking-tighter">Ratas del Queiles</h1>
     </div>
     <div class="flex items-center gap-3">
         <?php
@@ -237,37 +186,21 @@ if (isset($_GET['id'])) {
         }
         ?>
         <?php if (!empty($foto_usuario) && strpos($foto_usuario, 'http') === 0): ?>
-            <img src="<?php echo $foto_usuario; ?>" alt="Foto" class="user-avatar" id="avatar-button" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.1);cursor:pointer;">
+            <img src="<?php echo $foto_usuario; ?>" alt="Foto" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.1);">
         <?php else: ?>
-            <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='16' fill='%232a2a2a'/%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='18' fill='%23666' font-family='Arial'%3E👤%3C/text%3E%3C/svg%3E" alt="Sin foto" class="user-avatar" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.1);cursor:pointer;">
+            <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='16' fill='%232a2a2a'/%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='18' fill='%23666' font-family='Arial'%3E👤%3C/text%3E%3C/svg%3E" alt="Sin foto" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.1);">
         <?php endif; ?>
-        <div class="relative" id="settings-menu">
-            <button id="settings-button" class="text-on-surface-variant hover:bg-surface-container-high transition-colors duration-200 ease-in-out p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-primary">
-                <span class="material-symbols-outlined">settings</span>
-            </button>
-            <div id="settings-dropdown" class="absolute right-0 mt-2 w-48 bg-surface-container border border-outline-variant rounded-lg shadow-lg py-1 hidden z-50">
-                <?php if(isset($_SESSION['usuario_nombre'])): ?>
-                    <div class="px-4 py-2 border-b border-outline-variant">
-                        <span class="block text-on-background font-label-md"><?php echo $_SESSION['usuario_nombre']; ?></span>
-                        <span class="block text-secondary font-label-sm text-xs"><?php echo $_SESSION['rol']; ?></span>
-                    </div>
-                    <a href="logout.php" class="block px-4 py-2 text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-colors font-label-md">
-                        <span class="material-symbols-outlined text-[18px] align-middle mr-2">logout</span> Cerrar Sesión
-                    </a>
-                <?php endif; ?>
-            </div>
-        </div>
     </div>
 </header>
 
-<main class="flex-grow p-4 md:p-6 flex flex-col gap-6 pb-24 md:pb-8 max-w-container-max mx-auto w-full">
+<main class="flex-grow p-4 md:p-6 flex flex-col gap-6 pb-24 md:pb-8 max-w-4xl mx-auto w-full">
     <div class="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-outline-variant pb-4">
         <div>
-            <h2 class="font-headline-lg text-headline-lg text-on-background uppercase tracking-tight">✏️ Editar Socio</h2>
+            <h2 class="text-2xl font-bold uppercase tracking-tight">✏️ Editar Socio</h2>
             <p class="text-secondary mt-1">Modifica los datos del socio.</p>
         </div>
         <div class="mt-3 md:mt-0">
-            <a href="admin_usuarios.php" class="text-secondary hover:text-primary transition-colors font-label-md uppercase text-sm inline-flex items-center gap-1">
+            <a href="admin_usuarios.php" class="text-secondary hover:text-primary transition-colors font-bold uppercase text-sm inline-flex items-center gap-1">
                 <span class="material-symbols-outlined text-[18px]">arrow_back</span> Volver
             </a>
         </div>
@@ -278,7 +211,6 @@ if (isset($_GET['id'])) {
             <div class="bg-red-900/50 text-red-200 p-4 rounded mb-4"><?php echo $error_mensaje; ?></div>
         <?php endif; ?>
 
-        <!-- NOTA: El form envía a sí mismo -->
         <form action="editar_socio.php" method="POST" enctype="multipart/form-data" class="space-y-5">
             <input type="hidden" name="id" value="<?php echo $fila['id']; ?>">
 
@@ -313,23 +245,6 @@ if (isset($_GET['id'])) {
             </div>
 
             <div>
-                <label class="label-dark" for="pregunta_seguridad">Pregunta de seguridad</label>
-                <select name="pregunta_seguridad" id="pregunta_seguridad" class="input-dark">
-                    <option value="">Selecciona una pregunta...</option>
-                    <option value="¿Cuál es el nombre de tu primera mascota?" <?php if($fila['pregunta_seguridad']=='¿Cuál es el nombre de tu primera mascota?') echo 'selected'; ?>>¿Cuál es el nombre de tu primera mascota?</option>
-                    <option value="¿Cuál es tu ciudad natal?" <?php if($fila['pregunta_seguridad']=='¿Cuál es tu ciudad natal?') echo 'selected'; ?>>¿Cuál es tu ciudad natal?</option>
-                    <option value="¿Cuál es el apellido de soltera de tu madre?" <?php if($fila['pregunta_seguridad']=='¿Cuál es el apellido de soltera de tu madre?') echo 'selected'; ?>>¿Cuál es el apellido de soltera de tu madre?</option>
-                    <option value="¿Cuál es tu comida favorita?" <?php if($fila['pregunta_seguridad']=='¿Cuál es tu comida favorita?') echo 'selected'; ?>>¿Cuál es tu comida favorita?</option>
-                    <option value="¿Cuál es el nombre de tu mejor amigo de la infancia?" <?php if($fila['pregunta_seguridad']=='¿Cuál es el nombre de tu mejor amigo de la infancia?') echo 'selected'; ?>>¿Cuál es el nombre de tu mejor amigo de la infancia?</option>
-                </select>
-            </div>
-            <div>
-                <label class="label-dark" for="respuesta_seguridad">Respuesta de seguridad</label>
-                <input type="text" name="respuesta_seguridad" id="respuesta_seguridad" class="input-dark" value="" placeholder="Solo rellena si quieres cambiar la respuesta actual">
-                <p class="text-secondary text-xs mt-1">Si la dejas vacía, se mantendrá la respuesta anterior.</p>
-            </div>
-
-            <div>
                 <label class="label-dark" for="aprobado">Estado</label>
                 <select name="aprobado" id="aprobado" class="input-dark">
                     <option value="1" <?php if($fila['aprobado']==1) echo 'selected'; ?>>Aprobado</option>
@@ -354,10 +269,10 @@ if (isset($_GET['id'])) {
             </div>
 
             <div class="flex flex-col sm:flex-row gap-4 pt-4 border-t border-outline-variant/30">
-                <button type="submit" class="flex-1 bg-primary-container text-black font-headline-md text-[16px] uppercase px-8 py-3 rounded-sm border-2 border-black shadow-[inset_0_0_0_2px_rgba(255,255,255,0.2)] hover:bg-primary transition-colors flex items-center justify-center gap-2">
+                <button type="submit" class="flex-1 bg-[#ff5719] text-black font-bold text-[16px] uppercase px-8 py-3 rounded-sm border-2 border-black shadow-[inset_0_0_0_2px_rgba(255,255,255,0.2)] hover:bg-[#ffb59e] transition-colors">
                     💾 Guardar Cambios
                 </button>
-                <a href="admin_usuarios.php" class="flex-1 bg-surface-container-high text-on-surface-variant font-headline-md text-[16px] uppercase px-8 py-3 rounded-sm border border-outline-variant hover:border-primary transition-colors flex items-center justify-center gap-2 text-center">
+                <a href="admin_usuarios.php" class="flex-1 bg-[#2a2a2a] text-[#e5e2e1] font-bold text-[16px] uppercase px-8 py-3 rounded-sm border border-[#5c4037] hover:border-[#ffb59e] transition-colors text-center">
                     Cancelar
                 </a>
             </div>
