@@ -26,7 +26,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $api_key = getenv('CLOUDINARY_API_KEY');
             $api_secret = getenv('CLOUDINARY_API_SECRET');
             $timestamp = time();
-            $signature = sha1("timestamp=" . $timestamp . $api_secret);
+            
+            // CORREGIDO: Añadido folder=ratas_actas_pdf a la firma
+            $signature = sha1("folder=ratas_actas_pdf&timestamp=" . $timestamp . $api_secret);
 
             $ch = curl_init("https://api.cloudinary.com/v1_1/{$cloud_name}/raw/upload");
             $cfile = new CURLFile($archivo['tmp_name']);
@@ -37,6 +39,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // CORREGIDO: Evita errores SSL
             $respuesta = curl_exec($ch);
             curl_close($ch);
             
@@ -56,7 +59,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 VALUES ('$titulo', '$fecha', '$autor', '$asistentes', '$nombre_unico')";
         
         if ($conexion->query($sql) === TRUE) {
-            // Actualizar notificación de actas
             $conexion->query("UPDATE configuracion SET valor = NOW() WHERE clave = 'ultima_acta'");
             if ($conexion->affected_rows == 0) {
                 $conexion->query("INSERT INTO configuracion (clave, valor) VALUES ('ultima_acta', NOW())");

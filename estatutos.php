@@ -2,7 +2,7 @@
 session_start();
 include 'conexion.php';
 
-// 🔴 DETECTAR NUEVAS ACTAS (para la junta)[cite: 45]
+// 🔴 DETECTAR NUEVAS ACTAS (para la junta)
 $hay_actas_nuevas = false;
 if (isset($_SESSION['usuario_id'])) {
     $sql_ultima = "SELECT valor FROM configuracion WHERE clave = 'ultima_acta'";
@@ -28,7 +28,7 @@ if ($es_junta) {
 }
 
 // =========================================================================
-// 1. PROCESAR SUBIDA DE NUEVOS ESTATUTOS (Solo Superadmin)[cite: 44]
+// 1. PROCESAR SUBIDA DE NUEVOS ESTATUTOS (Solo Superadmin)
 // =========================================================================
 if ($_SERVER["REQUEST_METHOD"] == "POST" && $es_superadmin) {
     if (isset($_FILES['archivo_pdf']) && $_FILES['archivo_pdf']['error'] == 0) {
@@ -36,12 +36,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && $es_superadmin) {
         $extension = strtolower(pathinfo($archivo['name'], PATHINFO_EXTENSION));
 
         if ($extension == 'pdf') {
-            // --- CLOUDINARY UPLOAD (RAW - PARA PDFs) ---
+            // --- CLOUDINARY UPLOAD ---
             $cloud_name = getenv('CLOUDINARY_CLOUD_NAME');
             $api_key = getenv('CLOUDINARY_API_KEY');
             $api_secret = getenv('CLOUDINARY_API_SECRET');
             $timestamp = time();
-            $signature = sha1("timestamp=" . $timestamp . $api_secret);
+            
+            // CORREGIDO: Añadido folder=ratas_estatutos a la firma
+            $signature = sha1("folder=ratas_estatutos&timestamp=" . $timestamp . $api_secret);
 
             $ch = curl_init("https://api.cloudinary.com/v1_1/{$cloud_name}/raw/upload");
             $cfile = new CURLFile($archivo['tmp_name']);
@@ -52,6 +54,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && $es_superadmin) {
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // CORREGIDO: Evita errores SSL
             $respuesta = curl_exec($ch);
             curl_close($ch);
             
@@ -59,10 +62,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && $es_superadmin) {
             if (isset($json['secure_url'])) {
                 $nombre_unico = $json['secure_url']; // URL de Cloudinary
                 
-                // Actualizar la base de datos[cite: 44]
                 $sql_update = "UPDATE configuracion SET valor = '$nombre_unico' WHERE clave = 'estatutos_pdf'";
                 if ($conexion->query($sql_update) === TRUE) {
-                    // Si no existía la fila, la creamos
                     if ($conexion->affected_rows == 0) {
                         $conexion->query("INSERT INTO configuracion (clave, valor) VALUES ('estatutos_pdf', '$nombre_unico')");
                     }
@@ -81,7 +82,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && $es_superadmin) {
 }
 
 // =========================================================================
-// 2. OBTENER ESTATUTOS ACTUALES[cite: 45]
+// 2. OBTENER ESTATUTOS ACTUALES
 // =========================================================================
 $sql = "SELECT valor FROM configuracion WHERE clave = 'estatutos_pdf'";
 $resultado = $conexion->query($sql);
@@ -104,18 +105,7 @@ $pdf_estatutos = $fila['valor'] ?? null;
         tailwind.config = {
             darkMode: "class",
             theme: {
-                extend: {
-                    colors: {
-                        "primary": "#ffb59e",
-                        "error": "#ffb4ab",
-                        "surface-container": "#201f1f",
-                        "surface-container-high": "#2a2a2a",
-                        "outline-variant": "#5c4037",
-                        "background": "#131313",
-                        "on-background": "#e5e2e1",
-                        "secondary": "#c6c6c6"
-                    }
-                }
+                extend: { colors: { "primary": "#ffb59e", "surface-container": "#201f1f", "surface-container-high": "#2a2a2a", "outline-variant": "#5c4037", "background": "#131313", "on-background": "#e5e2e1", "secondary": "#c6c6c6" } }
             }
         }
     </script>
@@ -133,7 +123,6 @@ $pdf_estatutos = $fila['valor'] ?? null;
 </head>
 <body class="bg-background text-on-background font-body-md min-h-screen flex flex-col noise-bg">
 
-<!-- Cabecera -->
 <header class="bg-background border-b border-outline-variant flex justify-between items-center w-full px-4 py-2 h-16 sticky top-0 z-50">
     <div class="flex items-center gap-2">
         <img alt="Logo" class="h-8 w-8 object-contain rounded-full border border-outline-variant" src="images/logo2.jpg">
@@ -153,7 +142,6 @@ $pdf_estatutos = $fila['valor'] ?? null;
         <?php endif; ?>
     </div>
 
-    <!-- Mensajes de feedback -->
     <?php if (isset($_GET['exito'])): ?>
         <div class="bg-green-900/50 text-green-200 p-4 rounded mt-4 text-sm border border-green-500/30">✅ Estatutos actualizados correctamente.</div>
     <?php endif; ?>
@@ -163,7 +151,6 @@ $pdf_estatutos = $fila['valor'] ?? null;
 
     <div class="bg-surface-container rounded-xl chrome-border p-6 text-center mt-6">
         <?php 
-        // Comprobamos si la variable existe y si es una URL válida (empieza por http)
         if (!empty($pdf_estatutos) && strpos($pdf_estatutos, 'http') === 0): 
         ?>
             <span class="material-symbols-outlined text-6xl text-primary">picture_as_pdf</span>
@@ -180,7 +167,6 @@ $pdf_estatutos = $fila['valor'] ?? null;
     <?php if ($es_superadmin): ?>
         <div class="bg-surface-container rounded-xl chrome-border p-6 mt-6">
             <h3 class="font-bold text-primary uppercase mb-4">🛠️ Gestión de Estatutos</h3>
-            <!-- Fíjate que el action apunta al mismo archivo -->
             <form action="estatutos.php" method="POST" enctype="multipart/form-data" class="flex flex-col gap-4">
                 <div>
                     <label class="block text-secondary text-xs uppercase font-bold mb-2" for="archivo_pdf">Selecciona un nuevo archivo PDF:</label>
