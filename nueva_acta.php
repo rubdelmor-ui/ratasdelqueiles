@@ -92,10 +92,32 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
     </script>
     <style>
-        .input-dark { background-color: #1a1a1a; border: 1px solid rgba(255, 255, 255, 0.1); color: #e5e2e1; padding: 0.6rem 0.8rem; border-radius: 0.25rem; width: 100%; }
-        .input-dark:focus { outline: none; border-color: #ffb59e; }
-        .label-dark { display: block; color: #b0b0b0; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; text-transform: uppercase; margin-bottom: 0.25rem; }
-    </style>
+    .input-dark { 
+        background-color: #1a1a1a !important; 
+        border: 1px solid rgba(255, 255, 255, 0.1) !important; 
+        color: #ffffff !important; 
+        padding: 0.6rem 0.8rem !important; 
+        border-radius: 0.25rem !important; 
+        width: 100% !important; 
+        font-family: 'Hanken Grotesk', sans-serif !important;
+    }
+    .input-dark:focus { 
+        outline: none !important; 
+        border-color: #ffb59e !important; 
+        box-shadow: 0 0 0 2px rgba(255,181,158,0.2) !important;
+    }
+    .input-dark::-webkit-calendar-picker-indicator {
+        filter: invert(1) !important;
+    }
+    .label-dark { 
+        display: block; 
+        color: #b0b0b0; 
+        font-family: 'JetBrains Mono', monospace; 
+        font-size: 0.75rem; 
+        text-transform: uppercase; 
+        margin-bottom: 0.25rem; 
+    }
+</style>
 </head>
 <body class="bg-background text-on-background min-h-screen p-6">
     <div class="max-w-2xl mx-auto">

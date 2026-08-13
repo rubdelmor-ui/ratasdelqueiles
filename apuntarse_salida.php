@@ -2,16 +2,17 @@
 session_start();
 include 'conexion.php';
 
-// 1. Verificar sesión activa (cualquier usuario logueado puede apuntarse)[cite: 28, 34]
+// 1. Verificar sesión activa
 if (!isset($_SESSION['usuario_id'])) {
     header("Location: login.php");
     exit;
 }
 
 $usuario_id = $_SESSION['usuario_id'];
+$error_mensaje = null;
 
 // =========================================================================
-// 2. PROCESAR EL FORMULARIO (Si se ha enviado por POST)[cite: 34]
+// 2. PROCESAR EL FORMULARIO (POST)
 // =========================================================================
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $salida_id = intval($_POST['salida_id']);
@@ -20,37 +21,45 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     // Validar que la salida existe
     $sql_check = "SELECT id FROM salidas WHERE id = $salida_id";
-    if ($conexion->query($sql_check)->num_rows == 0) {
-        header("Location: salidas.php");
-        exit;
-    }
-
-    // Insertar la inscripción principal del socio[cite: 34]
-    $sql_insc = "INSERT INTO inscripciones (salida_id, usuario_id) VALUES ($salida_id, $usuario_id)";
-    if ($conexion->query($sql_insc) === TRUE) {
-        $inscripcion_id = $conexion->insert_id;
+    if ($conexion->query($sql_check)->num_rows > 0) {
         
-        // Si hay acompañantes, insertarlos uno a uno[cite: 34]
-        if ($con_acompanantes && !empty($nombres_acompanantes)) {
-            foreach ($nombres_acompanantes as $nombre) {
-                $nombre = trim($nombre);
-                if (!empty($nombre)) {
-                    // Evitamos inyección SQL básica
-                    $nombre_seguro = $conexion->real_escape_string($nombre);
-                    $sql_acomp = "INSERT INTO acompanantes (inscripcion_id, nombre) VALUES ($inscripcion_id, '$nombre_seguro')";
-                    $conexion->query($sql_acomp);
+        // COMPROBACIÓN CLAVE ANTES DEL INSERT: Evitar duplicados
+        $check_insc = "SELECT id FROM inscripciones WHERE salida_id = $salida_id AND usuario_id = $usuario_id";
+        if ($conexion->query($check_insc)->num_rows == 0) {
+            // No está apuntado, procedemos a insertar
+            $sql_insc = "INSERT INTO inscripciones (salida_id, usuario_id) VALUES ($salida_id, $usuario_id)";
+            if ($conexion->query($sql_insc) === TRUE) {
+                $inscripcion_id = $conexion->insert_id;
+                
+                // Insertar acompañantes si los hay
+                if ($con_acompanantes && !empty($nombres_acompanantes)) {
+                    foreach ($nombres_acompanantes as $nombre) {
+                        $nombre = trim($nombre);
+                        if (!empty($nombre)) {
+                            $nombre_seguro = $conexion->real_escape_string($nombre);
+                            $sql_acomp = "INSERT INTO acompanantes (inscripcion_id, nombre) VALUES ($inscripcion_id, '$nombre_seguro')";
+                            $conexion->query($sql_acomp);
+                        }
+                    }
                 }
+                header("Location: salidas.php");
+                exit;
+            } else {
+                $error_mensaje = "Error al apuntarse: " . $conexion->error;
             }
+        } else {
+            // Si ya estaba apuntado, lo devolvemos a salidas sin hacer nada
+            header("Location: salidas.php");
+            exit;
         }
+    } else {
         header("Location: salidas.php");
         exit;
-    } else {
-        $error_mensaje = "Error al apuntarse: " . $conexion->error;
     }
 }
 
 // =========================================================================
-// 3. CARGAR DATOS PARA EL FORMULARIO (Si entramos por GET)[cite: 28]
+// 3. CARGAR DATOS PARA EL FORMULARIO (GET)
 // =========================================================================
 if (!isset($_GET['salida_id'])) {
     header("Location: salidas.php");
@@ -59,23 +68,21 @@ if (!isset($_GET['salida_id'])) {
 
 $salida_id = intval($_GET['salida_id']);
 
-// Obtener el nombre del destino para mostrarlo en el formulario[cite: 28]
-$sql_check = "SELECT destino FROM salidas WHERE id = $salida_id";
-$res_check = $conexion->query($sql_check);
-if ($res_check->num_rows == 0) {
+// Comprobar si ya está inscrito para no mostrar el formulario de nuevo
+$check_insc_get = "SELECT id FROM inscripciones WHERE salida_id = $salida_id AND usuario_id = $usuario_id";
+if ($conexion->query($check_insc_get)->num_rows > 0) {
     header("Location: salidas.php");
     exit;
 }
-$destino = $res_check->fetch_assoc()['destino'];
 
-// Comprobar si ya está inscrito para no mostrar el formulario de nuevo[cite: 28]
-$check_insc = "SELECT id FROM inscripciones WHERE salida_id = $salida_id AND usuario_id = $usuario_id";
-$res_insc = $conexion->query($check_insc);
-if ($res_insc->num_rows > 0) {
-    // Si ya está apuntado, lo devolvemos a salidas (allí verá el botón "Ya no voy")
+// Obtener el nombre del destino
+$sql_check_salida = "SELECT destino FROM salidas WHERE id = $salida_id";
+$res_check_salida = $conexion->query($sql_check_salida);
+if ($res_check_salida->num_rows == 0) {
     header("Location: salidas.php");
     exit;
 }
+$destino = $res_check_salida->fetch_assoc()['destino'];
 ?>
 <!DOCTYPE html>
 <html class="dark" lang="es">
@@ -93,7 +100,7 @@ if ($res_insc->num_rows > 0) {
         body { background: #131313; color: #e5e2e1; font-family: 'Hanken Grotesk', sans-serif; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1rem; }
         .bg-surface { background: #201f1f; }
         .chrome-border { border: 1px solid rgba(255,255,255,0.1); }
-        .input-dark { background-color: #1a1a1a; border: 1px solid rgba(255,255,255,0.1); color: #e5e2e1; padding: 0.6rem; border-radius: 0.25rem; width: 100%; font-family: 'Hanken Grotesk', sans-serif; font-size: 1rem; }
+        .input-dark { background-color: #1a1a1a; border: 1px solid rgba(255,255,255,0.1); color: #ffffff; padding: 0.6rem; border-radius: 0.25rem; width: 100%; font-family: 'Hanken Grotesk', sans-serif; font-size: 1rem; }
         .input-dark:focus { outline: none; border-color: #ffb59e; }
         .input-dark::placeholder { color: #666; }
         .btn-primary { background: #ff5719; color: black; border: 2px solid black; padding: 0.75rem 2rem; border-radius: 0.25rem; font-weight: 600; cursor: pointer; transition: background 0.2s; width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem; font-family: 'Anybody', sans-serif; font-size: 1rem; text-transform: uppercase; }
@@ -110,7 +117,7 @@ if ($res_insc->num_rows > 0) {
 <body class="noise-bg">
     <div class="bg-surface rounded-xl chrome-border p-8 max-w-lg w-full relative z-10">
         
-        <?php if(isset($error_mensaje)): ?>
+        <?php if($error_mensaje): ?>
             <div class="bg-red-900/50 text-red-200 p-4 rounded mb-4 text-sm border border-red-500/30"><?php echo $error_mensaje; ?></div>
         <?php endif; ?>
 
@@ -118,7 +125,6 @@ if ($res_insc->num_rows > 0) {
         <p class="text-primary font-headline-md text-xl font-bold"><?php echo htmlspecialchars($destino); ?></p>
         <p class="text-secondary text-sm mt-4">¿Vienes con acompañantes?</p>
         
-        <!-- Fíjate que el action ahora apunta al mismo archivo -->
         <form action="apuntarse_salida.php" method="POST">
             <input type="hidden" name="salida_id" value="<?php echo $salida_id; ?>">
             <div class="mt-3 flex gap-6">
