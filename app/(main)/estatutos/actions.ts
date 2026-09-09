@@ -32,3 +32,13 @@ export async function subirEstatutos(formData: FormData) {
   revalidatePath('/estatutos');
   redirect('/estatutos?exito=1');
 }
+
+export async function borrarEstatutos() {
+  await requireSuperadmin('/estatutos');
+
+  const db = await getDb();
+  await db.collection('configuracion').deleteOne({ clave: 'estatutos_pdf' });
+
+  revalidatePath('/estatutos');
+  redirect('/estatutos');
+}

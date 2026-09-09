@@ -1,7 +1,8 @@
 import { getDb } from '@/lib/db';
 import { getSession, esSuperadmin } from '@/lib/session';
 import PageHeader from '@/components/PageHeader';
-import { subirEstatutos } from './actions';
+import ConfirmSubmitButton from '@/components/ConfirmSubmitButton';
+import { subirEstatutos, borrarEstatutos } from './actions';
 
 export default async function EstatutosPage({
   searchParams,
@@ -44,6 +45,17 @@ export default async function EstatutosPage({
               <span className="material-symbols-outlined text-[18px]">description</span>
               Ver Estatutos
             </a>
+            {superadmin && (
+              <form action={borrarEstatutos} className="mt-2">
+                <ConfirmSubmitButton
+                  confirmMessage="¿Eliminar los estatutos actuales? Los socios dejarán de ver el PDF hasta que subas uno nuevo."
+                  className="btn btn-ghost btn-sm"
+                >
+                  <span className="material-symbols-outlined text-[16px] text-ember">delete</span>
+                  Eliminar
+                </ConfirmSubmitButton>
+              </form>
+            )}
           </>
         ) : (
           <>
