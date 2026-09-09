@@ -1,5 +1,27 @@
 import './globals.css'
+import { Anybody, Hanken_Grotesk, JetBrains_Mono } from 'next/font/google'
 import ServiceWorkerRegister from '@/components/ServiceWorkerRegister'
+
+// Autoalojadas con next/font: se descargan en build, sin petición externa a
+// Google Fonts en el navegador (menos bloqueo de render, cero CLS por FOUT).
+const anybody = Anybody({
+  subsets: ['latin'],
+  weight: ['600', '700', '800', '900'],
+  variable: '--font-anybody',
+  display: 'swap',
+})
+const hankenGrotesk = Hanken_Grotesk({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-hanken',
+  display: 'swap',
+})
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  weight: ['500', '700'],
+  variable: '--font-jetbrains',
+  display: 'swap',
+})
 
 export const metadata = {
   title: 'Ratas del Queiles',
@@ -12,15 +34,15 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="es" className="dark">
+    <html
+      lang="es"
+      className={`dark ${anybody.variable} ${hankenGrotesk.variable} ${jetbrainsMono.variable}`}
+    >
       <head>
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#121110" />
-        <link rel="apple-touch-icon" href="/images/logo2.jpg" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Anybody:wght@600;700;800;900&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap"
-          rel="stylesheet"
-        />
+        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+        <link rel="icon" href="/icons/icon-192.png" type="image/png" sizes="192x192" />
         <link
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
           rel="stylesheet"

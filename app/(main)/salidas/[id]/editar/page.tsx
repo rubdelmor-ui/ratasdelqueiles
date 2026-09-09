@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { ObjectId } from 'mongodb';
 import { getDb } from '@/lib/db';
@@ -70,7 +71,7 @@ export default async function EditarSalidaPage({
           <div>
             <label className={labelDarkClass}>Imagen actual</label>
             {salida.imagen ? (
-              <img src={salida.imagen} className="max-w-[150px] max-h-[150px] rounded border border-steel/50" alt="Imagen actual" />
+              <Image src={salida.imagen} width={150} height={150} className="max-w-[150px] max-h-[150px] w-auto h-auto rounded border border-steel/50" alt="Imagen actual" />
             ) : (
               <p className="text-smoke text-sm">No hay imagen en la nube.</p>
             )}

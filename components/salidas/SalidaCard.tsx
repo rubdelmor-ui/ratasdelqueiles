@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import type { SalidaConDatos } from '@/lib/salidas';
 import Countdown from './Countdown';
 import AsistentesButton from './AsistentesButton';
@@ -48,7 +49,7 @@ export default function SalidaCard({
         <div className="flex items-start justify-between gap-2">
           <h4 className="display-text text-lg text-chrome leading-tight">{salida.destino}</h4>
           {salida.imagen && (
-            <img src={salida.imagen} alt="" className="w-12 h-12 rounded object-cover border border-steel/50 flex-shrink-0" />
+            <Image src={salida.imagen} alt="" width={48} height={48} className="w-12 h-12 rounded object-cover border border-steel/50 flex-shrink-0" />
           )}
         </div>
 

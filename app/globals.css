@@ -23,9 +23,11 @@
   --color-ember-dim: #a3172f;
   --color-moss: #4a9d63;
 
-  --font-display: "Anybody", sans-serif;
-  --font-body: "Hanken Grotesk", sans-serif;
-  --font-mono: "JetBrains Mono", monospace;
+  /* Las familias reales las inyecta next/font (ver app/layout.tsx) via estas
+     variables; aquí solo añadimos el fallback genérico. */
+  --font-display: var(--font-anybody), sans-serif;
+  --font-body: var(--font-hanken), sans-serif;
+  --font-mono: var(--font-jetbrains), monospace;
 }
 
 @layer base {

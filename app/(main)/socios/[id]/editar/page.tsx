@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { ObjectId } from 'mongodb';
 import { getDb } from '@/lib/db';
@@ -71,7 +72,7 @@ export default async function EditarSocioPage({ params }: { params: Promise<{ id
           <div>
             <label className={labelDarkClass}>Foto actual</label>
             {socio.foto ? (
-              <img src={socio.foto} className="w-20 h-20 rounded-full object-cover border-2 border-steel/50" alt="Foto" />
+              <Image src={socio.foto} width={80} height={80} className="w-20 h-20 rounded-full object-cover border-2 border-steel/50" alt="Foto" />
             ) : (
               <p className="text-smoke text-sm">Sin foto o no es de la nube</p>
             )}

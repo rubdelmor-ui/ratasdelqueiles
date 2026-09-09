@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { registrarUsuario } from './actions';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function RegistroPage() {
   const [mostrarPassword, setMostrarPassword] = useState(false);
@@ -31,7 +32,7 @@ export default function RegistroPage() {
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center text-center mb-8">
           <div className="w-24 h-24 rounded-full border-[3px] border-rust p-1 shadow-[0_0_0_4px_rgba(0,0,0,0.5),0_0_30px_-6px_var(--color-rust)] mb-5">
-            <img alt="Logo" className="w-full h-full object-cover rounded-full" src="/images/logo2.jpg" />
+            <Image alt="Logo" className="w-full h-full object-cover rounded-full" src="/images/logo2.jpg" width={96} height={96} priority />
           </div>
           <h1 className="display-text text-3xl text-chrome leading-tight">
             Ratas <span className="text-rust">del Queiles</span>

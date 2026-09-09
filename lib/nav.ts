@@ -19,20 +19,17 @@ export async function getNavContext(): Promise<NavContext> {
   const junta = esJunta(session);
   const superadmin = esSuperadmin(session);
 
-  let pendientesTotal = 0;
-  if (junta) {
-    pendientesTotal = await db.collection('usuarios').countDocuments({ aprobado: 0 });
-  }
+  const [pendientesTotal, config] = await Promise.all([
+    junta ? db.collection('usuarios').countDocuments({ aprobado: 0 }) : Promise.resolve(0),
+    session ? db.collection('configuracion').findOne({ clave: 'ultima_acta' }) : Promise.resolve(null),
+  ]);
 
   let hayActasNuevas = false;
-  if (session) {
-    const config = await db.collection('configuracion').findOne({ clave: 'ultima_acta' });
-    if (config?.valor) {
-      const ultimaActa = new Date(config.valor).getTime();
-      const cookieStore = await cookies();
-      const ultimaVisita = Number(cookieStore.get('ultima_visita_actas')?.value || 0);
-      hayActasNuevas = ultimaActa > ultimaVisita;
-    }
+  if (config?.valor) {
+    const ultimaActa = new Date(config.valor).getTime();
+    const cookieStore = await cookies();
+    const ultimaVisita = Number(cookieStore.get('ultima_visita_actas')?.value || 0);
+    hayActasNuevas = ultimaActa > ultimaVisita;
   }
 
   return { session, esSuperadmin: superadmin, esJunta: junta, pendientesTotal, hayActasNuevas };

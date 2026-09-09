@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { getDb } from '@/lib/db';
 import { getSession, esSuperadmin } from '@/lib/session';
 import type { ContenidoHome } from '@/lib/types';
@@ -27,7 +28,14 @@ export default async function Home() {
           </span>
 
           <div className="w-28 h-28 mx-auto mb-5 rounded-full border-[3px] border-rust p-1 shadow-[0_0_0_4px_rgba(0,0,0,0.5),0_0_40px_-8px_var(--color-rust)]">
-            <img alt="Club Logo" className="w-full h-full object-cover rounded-full" src="/images/logo2.jpg" />
+            <Image
+              alt="Club Logo"
+              className="w-full h-full object-cover rounded-full"
+              src="/images/logo2.jpg"
+              width={112}
+              height={112}
+              priority
+            />
           </div>
 
           <h2 className="display-text text-4xl text-chrome leading-[0.95]">
@@ -61,11 +69,15 @@ export default async function Home() {
         </span>
         <div className="cut-panel bg-surface-high border border-steel/50 p-4 min-h-[140px] flex items-center justify-center">
           {contenido?.imagen ? (
-            <img
-              src={contenido.imagen}
-              alt="Imagen de la home"
-              className="max-w-full max-h-[300px] object-cover rounded"
-            />
+            <div className="relative w-full h-[300px]">
+              <Image
+                src={contenido.imagen}
+                alt="Imagen de la home"
+                fill
+                sizes="(max-width: 768px) 100vw, 700px"
+                className="object-cover rounded"
+              />
+            </div>
           ) : (
             <div className="text-ash flex flex-col items-center gap-2 py-6">
               <span className="material-symbols-outlined text-4xl">image</span>

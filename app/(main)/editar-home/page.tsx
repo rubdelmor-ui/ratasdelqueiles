@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { getDb } from '@/lib/db';
 import { requireSuperadmin } from '@/lib/session';
 import type { ContenidoHome } from '@/lib/types';
@@ -54,7 +55,7 @@ export default async function EditarHomePage({
           <div className="cut-panel-sm bg-surface-high p-4 border border-steel/40">
             <label className="field-label text-rust">Imagen actual</label>
             {contenido?.imagen ? (
-              <img src={contenido.imagen} className="max-w-[200px] max-h-[200px] rounded border border-steel/50" alt="Imagen actual" />
+              <Image src={contenido.imagen} width={200} height={200} className="max-w-[200px] max-h-[200px] w-auto h-auto rounded border border-steel/50" alt="Imagen actual" />
             ) : (
               <p className="text-sm text-smoke">No hay imagen en la nube.</p>
             )}

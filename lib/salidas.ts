@@ -21,8 +21,16 @@ export interface SalidaConDatos {
   yaApuntado: boolean;
 }
 
+interface InscripcionConDatos {
+  salida_id: ObjectId;
+  usuario_id: ObjectId;
+  usuario: { nombre: string };
+  acompanantes: { nombre: string }[];
+}
+
 /** Replica las consultas de salidas.php: próximas salidas + conteo y listado de
- * asistentes (socios + acompañantes) para cada una. */
+ * asistentes (socios + acompañantes) para cada una. Una sola consulta agregada
+ * para todas las salidas a la vez, en vez de una por salida (N+1). */
 export async function getSalidasConDatos(usuarioId?: string): Promise<SalidaConDatos[]> {
   const db = await getDb();
   const hoy = new Date().toISOString().slice(0, 10);
@@ -33,45 +41,55 @@ export async function getSalidasConDatos(usuarioId?: string): Promise<SalidaConD
     .sort({ fecha_salida: 1 })
     .toArray();
 
-  const resultado: SalidaConDatos[] = [];
+  if (salidas.length === 0) return [];
 
-  for (const salida of salidas) {
-    const inscripciones = await db
-      .collection('inscripciones')
-      .aggregate([
-        { $match: { salida_id: salida._id } },
-        {
-          $lookup: {
-            from: 'usuarios',
-            localField: 'usuario_id',
-            foreignField: '_id',
-            as: 'usuario',
-          },
-        },
-        { $unwind: '$usuario' },
-        {
-          $lookup: {
-            from: 'acompanantes',
-            localField: '_id',
-            foreignField: 'inscripcion_id',
-            as: 'acompanantes',
-          },
-        },
-        { $sort: { 'usuario.nombre': 1 } },
-      ])
-      .toArray();
+  const salidaIds = salidas.map((s) => s._id);
 
-    const listaAsistentes: AsistenteConAcompanantes[] = inscripciones.map((i) => ({
+  const inscripciones = await db
+    .collection('inscripciones')
+    .aggregate<InscripcionConDatos>([
+      { $match: { salida_id: { $in: salidaIds } } },
+      {
+        $lookup: {
+          from: 'usuarios',
+          localField: 'usuario_id',
+          foreignField: '_id',
+          as: 'usuario',
+        },
+      },
+      { $unwind: '$usuario' },
+      {
+        $lookup: {
+          from: 'acompanantes',
+          localField: '_id',
+          foreignField: 'inscripcion_id',
+          as: 'acompanantes',
+        },
+      },
+      { $sort: { 'usuario.nombre': 1 } },
+    ])
+    .toArray();
+
+  const porSalida = new Map<string, InscripcionConDatos[]>();
+  for (const insc of inscripciones) {
+    const key = insc.salida_id.toString();
+    const lista = porSalida.get(key);
+    if (lista) lista.push(insc);
+    else porSalida.set(key, [insc]);
+  }
+
+  return salidas.map((salida) => {
+    const inscripcionesSalida = porSalida.get(salida._id.toString()) ?? [];
+
+    const listaAsistentes: AsistenteConAcompanantes[] = inscripcionesSalida.map((i) => ({
       socio: i.usuario.nombre,
-      acompanantes: (i.acompanantes as { nombre: string }[])
-        .map((a) => a.nombre)
-        .sort((a, b) => a.localeCompare(b)),
+      acompanantes: i.acompanantes.map((a) => a.nombre).sort((a, b) => a.localeCompare(b)),
     }));
 
     const totalInscritos = listaAsistentes.reduce((acc, a) => acc + 1 + a.acompanantes.length, 0);
 
     const yaApuntado = usuarioId
-      ? inscripciones.some((i) => i.usuario_id.toString() === usuarioId)
+      ? inscripcionesSalida.some((i) => i.usuario_id.toString() === usuarioId)
       : false;
 
     let fechaIso = '';
@@ -80,7 +98,7 @@ export async function getSalidasConDatos(usuarioId?: string): Promise<SalidaConD
       if (!isNaN(dt.getTime())) fechaIso = dt.toISOString();
     }
 
-    resultado.push({
+    return {
       id: salida._id.toString(),
       destino: salida.destino,
       fechaSalida: salida.fecha_salida,
@@ -93,10 +111,8 @@ export async function getSalidasConDatos(usuarioId?: string): Promise<SalidaConD
       totalInscritos,
       listaAsistentes,
       yaApuntado,
-    });
-  }
-
-  return resultado;
+    };
+  });
 }
 
 export async function getAsistentesParaExcel(salidaId: string) {
