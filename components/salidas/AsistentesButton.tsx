@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { AsistenteConAcompanantes } from '@/lib/salidas';
 
 export default function AsistentesButton({
@@ -25,7 +26,7 @@ export default function AsistentesButton({
         </span>
       </button>
 
-      {open && (
+      {open && createPortal(
         <div className="sheet-overlay" onClick={() => setOpen(false)}>
           <div className="sheet" onClick={(e) => e.stopPropagation()}>
             <div className="sheet-handle" />
@@ -67,7 +68,8 @@ export default function AsistentesButton({
               Cerrar
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
