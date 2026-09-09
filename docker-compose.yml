@@ -1,12 +1,5 @@
 # Despliegue en petisuis-server (~/apps/ratas-del-queiles-v2)
 #   docker compose up -d --build   →  http://100.98.87.110:8083
-#
-# NOTA TEMPORAL: el router de casa bloquea el puerto 27017 saliente hacia
-# MongoDB Atlas. Mientras no se arregle en el router, estos extra_hosts
-# desvían las 3 conexiones del shard de Atlas hacia un pequeño relé SNI que
-# corre en un equipo Windows del mismo tailnet (100.71.221.97), que sí tiene
-# salida libre a Atlas. Quitar este bloque en cuanto el router deje pasar el
-# 27017 de nuevo.
 services:
   ratas-del-queiles-v2:
     build: .
@@ -16,7 +9,3 @@ services:
       - .env
     ports:
       - "8083:3000"
-    extra_hosts:
-      - "ac-wxrtipm-shard-00-00.ezjypur.mongodb.net:100.71.221.97"
-      - "ac-wxrtipm-shard-00-01.ezjypur.mongodb.net:100.71.221.97"
-      - "ac-wxrtipm-shard-00-02.ezjypur.mongodb.net:100.71.221.97"
