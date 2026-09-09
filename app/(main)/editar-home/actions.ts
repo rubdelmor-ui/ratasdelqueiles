@@ -13,6 +13,8 @@ export async function guardarHome(formData: FormData) {
   const contenido = formData.get('contenido') as string;
   const textoImagen = formData.get('texto_imagen') as string;
   const imagen = formData.get('imagen') as File | null;
+  const reunionTexto = formData.get('reunion_texto') as string;
+  const reunionLugar = formData.get('reunion_lugar') as string;
 
   const db = await getDb();
   const actual = await db.collection('contenido_home').findOne({ seccion: 'bienvenida' });
@@ -37,6 +39,19 @@ export async function guardarHome(formData: FormData) {
     { $set: { contenido, texto_imagen: textoImagen, imagen: imagenUrl } },
     { upsert: true }
   );
+
+  await Promise.all([
+    db.collection('configuracion').updateOne(
+      { clave: 'reunion_texto' },
+      { $set: { valor: reunionTexto } },
+      { upsert: true }
+    ),
+    db.collection('configuracion').updateOne(
+      { clave: 'reunion_lugar' },
+      { $set: { valor: reunionLugar } },
+      { upsert: true }
+    ),
+  ]);
 
   if (hayImagenNueva) {
     const socios = await idsSociosAprobados();

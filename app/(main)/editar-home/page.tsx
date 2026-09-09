@@ -15,9 +15,15 @@ export default async function EditarHomePage({
   const { ok, error } = await searchParams;
 
   const db = await getDb();
-  const contenido = await db
-    .collection<ContenidoHome>('contenido_home')
-    .findOne({ seccion: 'bienvenida' });
+  const [contenido, reunionConfig] = await Promise.all([
+    db.collection<ContenidoHome>('contenido_home').findOne({ seccion: 'bienvenida' }),
+    db
+      .collection('configuracion')
+      .find({ clave: { $in: ['reunion_texto', 'reunion_lugar'] } })
+      .toArray(),
+  ]);
+  const reunionTexto = reunionConfig.find((c) => c.clave === 'reunion_texto')?.valor || 'Viernes · 20:00';
+  const reunionLugar = reunionConfig.find((c) => c.clave === 'reunion_lugar')?.valor || 'Sede del Club';
 
   const mensajesError: Record<string, string> = {
     formato: 'Formato de imagen no permitido.',
@@ -29,7 +35,7 @@ export default async function EditarHomePage({
       <PageHeader
         eyebrow="Panel de superadmin"
         title="Editar Home"
-        subtitle="Modifica el texto de bienvenida y la imagen principal."
+        subtitle="Modifica el texto de bienvenida, la imagen principal y la próxima reunión."
         action={
           <Link href="/" className="text-smoke hover:text-rust">
             <span className="material-symbols-outlined">close</span>
@@ -64,6 +70,18 @@ export default async function EditarHomePage({
           <div>
             <label className="field-label">Subir nueva imagen (opcional)</label>
             <input type="file" name="imagen" accept=".jpg,.jpeg,.png,.gif,.webp" className="field-input py-2" />
+          </div>
+
+          <div className="cut-panel-sm bg-surface-high p-4 border border-steel/40 space-y-3">
+            <label className="field-label text-rust">Próxima reunión (cuadro del menú lateral)</label>
+            <div>
+              <label className="field-label">Cuándo</label>
+              <input type="text" name="reunion_texto" defaultValue={reunionTexto} placeholder="Viernes · 20:00" className="field-input" />
+            </div>
+            <div>
+              <label className="field-label">Dónde</label>
+              <input type="text" name="reunion_lugar" defaultValue={reunionLugar} placeholder="Sede del Club" className="field-input" />
+            </div>
           </div>
 
           <div className="flex gap-3 pt-4 border-t border-dashed border-steel/50">

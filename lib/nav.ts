@@ -8,6 +8,8 @@ export interface NavContext {
   esJunta: boolean;
   pendientesTotal: number;
   hayActasNuevas: boolean;
+  reunionTexto: string;
+  reunionLugar: string;
 }
 
 /** Reúne todo lo que la cabecera/menús necesitan, equivalente a los bloques
@@ -19,9 +21,13 @@ export async function getNavContext(): Promise<NavContext> {
   const junta = esJunta(session);
   const superadmin = esSuperadmin(session);
 
-  const [pendientesTotal, config] = await Promise.all([
+  const [pendientesTotal, config, reunionConfig] = await Promise.all([
     junta ? db.collection('usuarios').countDocuments({ aprobado: 0 }) : Promise.resolve(0),
     session ? db.collection('configuracion').findOne({ clave: 'ultima_acta' }) : Promise.resolve(null),
+    db
+      .collection('configuracion')
+      .find({ clave: { $in: ['reunion_texto', 'reunion_lugar'] } })
+      .toArray(),
   ]);
 
   let hayActasNuevas = false;
@@ -32,5 +38,8 @@ export async function getNavContext(): Promise<NavContext> {
     hayActasNuevas = ultimaActa > ultimaVisita;
   }
 
-  return { session, esSuperadmin: superadmin, esJunta: junta, pendientesTotal, hayActasNuevas };
+  const reunionTexto = reunionConfig.find((c) => c.clave === 'reunion_texto')?.valor || 'Viernes · 20:00';
+  const reunionLugar = reunionConfig.find((c) => c.clave === 'reunion_lugar')?.valor || 'Sede del Club';
+
+  return { session, esSuperadmin: superadmin, esJunta: junta, pendientesTotal, hayActasNuevas, reunionTexto, reunionLugar };
 }
