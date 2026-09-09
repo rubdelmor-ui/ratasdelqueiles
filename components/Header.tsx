@@ -15,7 +15,7 @@ export default function Header({ session }: { session: SessionPayload | null }) 
           priority
         />
       </div>
-      <h1 className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 display-text text-[17px] text-chrome leading-none whitespace-nowrap">
+      <h1 className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 display-text text-[21px] text-chrome leading-none whitespace-nowrap">
         Ratas <span className="text-rust">del Queiles</span>
       </h1>
       <SettingsMenu session={session} />
