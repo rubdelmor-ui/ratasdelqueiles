@@ -2,7 +2,7 @@
 
 import { getDb } from '@/lib/db';
 import bcrypt from 'bcryptjs';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { createSessionToken } from '@/lib/session';
 
 export async function loginUsuario(formData: FormData) {
@@ -31,10 +31,15 @@ export async function loginUsuario(formData: FormData) {
     rol: user.rol,
   });
 
+  // En Vercel llega por HTTPS (x-forwarded-proto lo confirma); en el
+  // despliegue Docker propio se sirve por HTTP plano dentro del tailnet,
+  // así que `secure: NODE_ENV === 'production'` descartaba la cookie ahí.
+  const isHttps = (await headers()).get('x-forwarded-proto') === 'https';
+
   const cookieStore = await cookies();
   cookieStore.set('auth_token', token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: isHttps,
     sameSite: 'lax',
     maxAge: 60 * 60 * 24 * 7,
     path: '/',
