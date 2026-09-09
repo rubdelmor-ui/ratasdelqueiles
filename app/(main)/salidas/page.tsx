@@ -1,13 +1,13 @@
 import Link from 'next/link';
-import { getSession, esSuperadmin } from '@/lib/session';
+import { requireSession, esSuperadmin } from '@/lib/session';
 import { getSalidasConDatos } from '@/lib/salidas';
 import SalidaCard from '@/components/salidas/SalidaCard';
 import PageHeader from '@/components/PageHeader';
 
 export default async function SalidasPage() {
-  const session = await getSession();
+  const session = await requireSession('/login');
   const superadmin = esSuperadmin(session);
-  const salidas = await getSalidasConDatos(session?.id);
+  const salidas = await getSalidasConDatos(session.id);
 
   return (
     <>
