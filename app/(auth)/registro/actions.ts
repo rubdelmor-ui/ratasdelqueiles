@@ -3,6 +3,7 @@
 import { getDb } from '@/lib/db';
 import bcrypt from 'bcryptjs';
 import { uploadToCloudinary, extensionPermitidaImagen } from '@/lib/cloudinary';
+import { enviarPush, idSuperadmin } from '@/lib/push';
 
 export async function registrarUsuario(formData: FormData) {
   const nombre = formData.get('nombre') as string;
@@ -50,6 +51,13 @@ export async function registrarUsuario(formData: FormData) {
     pregunta_seguridad: pregunta,
     respuesta_seguridad: respuestaHash,
     fecha_registro: new Date(),
+  });
+
+  const superadminId = await idSuperadmin();
+  await enviarPush(superadminId, {
+    title: '🆕 Nueva solicitud de socio',
+    body: `${nombre} quiere unirse al club. Revisa su solicitud.`,
+    url: '/socios',
   });
 
   return { success: true };

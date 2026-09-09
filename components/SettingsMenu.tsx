@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import type { SessionPayload } from '@/lib/session';
 import { logout } from '@/app/logout/actions';
+import NotificationToggle from './NotificationToggle';
 
 export default function SettingsMenu({ session }: { session: SessionPayload | null }) {
   const [open, setOpen] = useState(false);
@@ -34,6 +35,7 @@ export default function SettingsMenu({ session }: { session: SessionPayload | nu
                 <span className="block text-chrome text-sm font-semibold truncate">{session.nombre}</span>
                 <span className="eyebrow">{session.rol}</span>
               </div>
+              <NotificationToggle />
               <form action={logout}>
                 <button
                   type="submit"

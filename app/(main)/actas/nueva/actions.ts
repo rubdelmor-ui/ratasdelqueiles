@@ -3,6 +3,7 @@
 import { getDb } from '@/lib/db';
 import { requireSuperadmin } from '@/lib/session';
 import { uploadToCloudinary, extensionEsPdf } from '@/lib/cloudinary';
+import { enviarPush, idsJunta } from '@/lib/push';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 
@@ -44,6 +45,13 @@ export async function crearActa(formData: FormData) {
     { $set: { valor: new Date().toISOString() } },
     { upsert: true }
   );
+
+  const junta = await idsJunta();
+  await enviarPush(junta, {
+    title: '📄 Nueva acta publicada',
+    body: titulo,
+    url: '/actas',
+  });
 
   revalidatePath('/actas');
   redirect('/actas');

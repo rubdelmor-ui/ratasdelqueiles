@@ -3,6 +3,7 @@
 import { getDb } from '@/lib/db';
 import { requireSuperadmin } from '@/lib/session';
 import { uploadToCloudinary, extensionPermitidaImagen } from '@/lib/cloudinary';
+import { enviarPush, idsSociosAprobados } from '@/lib/push';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
@@ -17,6 +18,7 @@ export async function guardarHome(formData: FormData) {
   const actual = await db.collection('contenido_home').findOne({ seccion: 'bienvenida' });
 
   let imagenUrl = actual?.imagen ?? null;
+  let hayImagenNueva = false;
 
   if (imagen && imagen.size > 0) {
     if (!extensionPermitidaImagen(imagen.name)) {
@@ -27,6 +29,7 @@ export async function guardarHome(formData: FormData) {
       redirect('/editar-home?error=cloudinary');
     }
     imagenUrl = url;
+    hayImagenNueva = true;
   }
 
   await db.collection('contenido_home').updateOne(
@@ -34,6 +37,15 @@ export async function guardarHome(formData: FormData) {
     { $set: { contenido, texto_imagen: textoImagen, imagen: imagenUrl } },
     { upsert: true }
   );
+
+  if (hayImagenNueva) {
+    const socios = await idsSociosAprobados();
+    await enviarPush(socios, {
+      title: '📸 Nueva novedad en el club',
+      body: 'Han añadido una imagen nueva en la portada.',
+      url: '/',
+    });
+  }
 
   revalidatePath('/');
   redirect('/editar-home?ok=1');
