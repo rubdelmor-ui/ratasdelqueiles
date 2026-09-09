@@ -1,5 +1,5 @@
 import { getDb } from '@/lib/db';
-import { getSession, esSuperadmin } from '@/lib/session';
+import { requireJunta, esSuperadmin } from '@/lib/session';
 import PageHeader from '@/components/PageHeader';
 import ConfirmSubmitButton from '@/components/ConfirmSubmitButton';
 import { subirEstatutos, borrarEstatutos } from './actions';
@@ -10,7 +10,7 @@ export default async function EstatutosPage({
   searchParams: Promise<{ exito?: string; error?: string }>;
 }) {
   const { exito, error } = await searchParams;
-  const session = await getSession();
+  const session = await requireJunta('/');
   const superadmin = esSuperadmin(session);
 
   const db = await getDb();
