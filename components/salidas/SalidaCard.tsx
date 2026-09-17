@@ -1,8 +1,8 @@
 import Link from 'next/link';
-import Image from 'next/image';
 import type { SalidaConDatos } from '@/lib/salidas';
 import Countdown from './Countdown';
 import AsistentesButton from './AsistentesButton';
+import SalidaImagen from './SalidaImagen';
 import { toggleApuntarse, borrarSalida } from '@/app/(main)/salidas/actions';
 import ConfirmSubmitButton from '@/components/ConfirmSubmitButton';
 
@@ -46,15 +46,7 @@ export default function SalidaCard({
       </div>
 
       <div className="flex-1 p-4 flex flex-col gap-2.5 min-w-0">
-        {salida.imagen && (
-          <Image
-            src={salida.imagen}
-            alt=""
-            width={480}
-            height={220}
-            className="w-full h-44 rounded-lg object-cover border border-steel/50"
-          />
-        )}
+        {salida.imagen && <SalidaImagen src={salida.imagen} />}
 
         <h4 className="display-text text-lg text-chrome leading-tight">{salida.destino}</h4>
 
