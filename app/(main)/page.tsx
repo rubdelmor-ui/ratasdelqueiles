@@ -3,6 +3,7 @@ import Image from 'next/image';
 import { getDb } from '@/lib/db';
 import { getSession, esSuperadmin } from '@/lib/session';
 import type { ContenidoHome } from '@/lib/types';
+import ImagenExpandible from '@/components/ImagenExpandible';
 
 async function getContenidoHome(): Promise<ContenidoHome | null> {
   const db = await getDb();
@@ -69,15 +70,11 @@ export default async function Home() {
         </span>
         <div className="cut-panel bg-surface-high border border-steel/50 p-4 min-h-[140px] flex items-center justify-center">
           {contenido?.imagen ? (
-            <div className="relative w-full h-[300px]">
-              <Image
-                src={contenido.imagen}
-                alt="Imagen de la home"
-                fill
-                sizes="(max-width: 768px) 100vw, 700px"
-                className="object-cover rounded"
-              />
-            </div>
+            <ImagenExpandible
+              src={contenido.imagen}
+              alt="Imagen de la home"
+              className="w-full h-[300px] rounded overflow-hidden"
+            />
           ) : (
             <div className="text-ash flex flex-col items-center gap-2 py-6">
               <span className="material-symbols-outlined text-4xl">image</span>
