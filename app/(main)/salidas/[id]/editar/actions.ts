@@ -16,6 +16,7 @@ export async function actualizarSalida(id: string, formData: FormData) {
   const punto = formData.get('punto_encuentro') as string;
   const descripcion = formData.get('descripcion') as string;
   const responsable = formData.get('responsable') as string;
+  const formularioGoogle = (formData.get('formulario_google') as string) || null;
   const imagenAntigua = formData.get('imagen_antigua') as string;
   const imagen = formData.get('imagen') as File | null;
 
@@ -44,6 +45,7 @@ export async function actualizarSalida(id: string, formData: FormData) {
         descripcion,
         responsable,
         imagen: imagenUrl,
+        formulario_google: formularioGoogle,
       },
     }
   );

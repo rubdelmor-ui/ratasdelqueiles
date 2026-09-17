@@ -26,6 +26,17 @@ export default async function ApuntarseSalidaPage({ params }: { params: Promise<
       <div className="cut-panel bg-surface border border-steel/50 p-6 max-w-sm w-full">
         <span className="eyebrow">Apuntarse a</span>
         <h2 className="display-text text-2xl text-rust mt-0.5 mb-5">{salida.destino}</h2>
+        {salida.formulario_google && (
+          <a
+            href={salida.formulario_google}
+            target="_blank"
+            rel="noreferrer"
+            className="btn btn-success btn-block mb-5"
+          >
+            <span className="material-symbols-outlined text-[18px]">description</span>
+            Formulario Google
+          </a>
+        )}
         <ApuntarseForm action={accion} />
       </div>
     </div>

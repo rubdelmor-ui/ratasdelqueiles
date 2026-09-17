@@ -61,6 +61,11 @@ export default async function NuevaSalidaPage({
             <input type="file" name="imagen" accept=".jpg,.jpeg,.png,.webp" className={`${inputDarkClass} py-2`} />
             <p className="text-ash text-xs mt-1">Formatos permitidos: JPG, PNG, WEBP.</p>
           </div>
+          <div>
+            <label className={labelDarkClass}>Enlace a formulario de Google (opcional)</label>
+            <input type="url" name="formulario_google" placeholder="https://forms.gle/..." className={inputDarkClass} />
+            <p className="text-ash text-xs mt-1">Si lo rellenas, a los socios les aparecerá un botón para abrirlo al apuntarse.</p>
+          </div>
           <div className="flex gap-3 pt-4 border-t border-dashed border-steel/50">
             <button type="submit" className="btn btn-primary flex-1">
               <span className="material-symbols-outlined text-[18px]">check_circle</span>

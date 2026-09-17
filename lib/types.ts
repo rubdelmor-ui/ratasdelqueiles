@@ -23,6 +23,7 @@ export interface Salida {
   descripcion: string;
   imagen: string | null;
   responsable: string;
+  formulario_google: string | null;
   fecha_creacion: Date;
 }
 

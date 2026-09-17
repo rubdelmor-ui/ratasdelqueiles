@@ -16,6 +16,7 @@ export async function crearSalida(formData: FormData) {
   const punto = formData.get('punto_encuentro') as string;
   const descripcion = formData.get('descripcion') as string;
   const responsable = formData.get('responsable') as string;
+  const formularioGoogle = (formData.get('formulario_google') as string) || null;
   const imagen = formData.get('imagen') as File | null;
 
   let imagenUrl: string | null = null;
@@ -40,6 +41,7 @@ export async function crearSalida(formData: FormData) {
     descripcion,
     imagen: imagenUrl,
     responsable,
+    formulario_google: formularioGoogle,
     fecha_creacion: new Date(),
   });
 

@@ -80,6 +80,17 @@ export default async function EditarSalidaPage({
             <label className={labelDarkClass}>Cambiar imagen (opcional)</label>
             <input type="file" name="imagen" accept=".jpg,.jpeg,.png,.webp" className={`${inputDarkClass} py-2`} />
           </div>
+          <div>
+            <label className={labelDarkClass}>Enlace a formulario de Google (opcional)</label>
+            <input
+              type="url"
+              name="formulario_google"
+              defaultValue={salida.formulario_google || ''}
+              placeholder="https://forms.gle/..."
+              className={inputDarkClass}
+            />
+            <p className="text-ash text-xs mt-1">Si lo rellenas, a los socios les aparecerá un botón para abrirlo al apuntarse.</p>
+          </div>
           <div className="flex gap-3 pt-4 border-t border-dashed border-steel/50">
             <button type="submit" className="btn btn-primary flex-1">
               <span className="material-symbols-outlined text-[18px]">save</span>
