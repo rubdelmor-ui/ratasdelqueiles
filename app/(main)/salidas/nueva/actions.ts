@@ -47,8 +47,8 @@ export async function crearSalida(formData: FormData) {
 
   const socios = await idsSociosAprobados();
   await enviarPush(socios, {
-    title: 'RATAS DEL QUEILES',
-    body: `NUEVA ACTIVIDAD PROGRAMADA\n${destino} · ${new Date(`${fecha}T${hora}`).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}`,
+    title: 'NUEVA ACTIVIDAD PROGRAMADA',
+    body: `${destino} · ${new Date(`${fecha}T${hora}`).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}`,
     url: '/salidas',
   });
 
