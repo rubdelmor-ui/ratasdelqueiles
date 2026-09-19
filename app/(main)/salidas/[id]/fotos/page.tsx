@@ -7,7 +7,6 @@ import type { FotoSalida } from '@/lib/types';
 import PageHeader from '@/components/PageHeader';
 import ImagenExpandible from '@/components/ImagenExpandible';
 import ConfirmSubmitButton from '@/components/ConfirmSubmitButton';
-import SubirFotos from '@/components/salidas/SubirFotos';
 import { borrarFoto } from './actions';
 
 export default async function FotosSalidaPage({ params }: { params: Promise<{ id: string }> }) {
@@ -32,7 +31,7 @@ export default async function FotosSalidaPage({ params }: { params: Promise<{ id
       <PageHeader
         eyebrow="Fotos de la salida"
         title={salida.destino}
-        subtitle="Cuelga tus fotos de esta salida para que las vea todo el club."
+        subtitle="Los recuerdos de esta salida, con las fotos que ha colgado todo el club."
         action={
           <Link href="/salidas" className="text-smoke hover:text-rust">
             <span className="material-symbols-outlined">close</span>
@@ -40,7 +39,10 @@ export default async function FotosSalidaPage({ params }: { params: Promise<{ id
         }
       />
 
-      <SubirFotos salidaId={id} />
+      <Link href={`/salidas/${id}/fotos/subir`} className="btn btn-primary btn-block">
+        <span className="material-symbols-outlined text-[20px]">add_a_photo</span>
+        Cuelga tus fotos
+      </Link>
 
       {fotos.length === 0 ? (
         <div className="cut-panel bg-surface border border-steel/50 p-10 text-center">

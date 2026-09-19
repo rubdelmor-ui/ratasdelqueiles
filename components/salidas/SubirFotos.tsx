@@ -48,12 +48,14 @@ export default function SubirFotos({ salidaId }: { salidaId: string }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [progreso, setProgreso] = useState<{ hecho: number; total: number } | null>(null);
   const [errores, setErrores] = useState<string[]>([]);
+  const [subidas, setSubidas] = useState(0);
 
   async function onChange(e: React.ChangeEvent<HTMLInputElement>) {
     const archivos = Array.from(e.target.files ?? []);
     if (archivos.length === 0) return;
 
     setErrores([]);
+    setSubidas(0);
     setProgreso({ hecho: 0, total: archivos.length });
     const fallos: string[] = [];
 
@@ -79,6 +81,7 @@ export default function SubirFotos({ salidaId }: { salidaId: string }) {
     if (inputRef.current) inputRef.current.value = '';
     setProgreso(null);
     setErrores(fallos);
+    setSubidas(archivos.length - fallos.length);
     router.refresh();
   }
 
@@ -97,6 +100,12 @@ export default function SubirFotos({ salidaId }: { salidaId: string }) {
           className="sr-only"
         />
       </label>
+
+      {subidas > 0 && (
+        <div className="bg-moss/15 border border-moss/40 text-chrome p-3 rounded mt-3 text-sm">
+          ✅ {subidas === 1 ? 'Foto subida' : `${subidas} fotos subidas`} correctamente.
+        </div>
+      )}
 
       {errores.length > 0 && (
         <div className="bg-ember/15 border border-ember/40 text-flame p-3 rounded mt-3 text-sm space-y-1">

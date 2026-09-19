@@ -83,10 +83,16 @@ export default function SalidaCard({
           />
         </div>
 
-        <Link href={`/salidas/${salida.id}/fotos`} className="btn btn-ghost btn-sm self-start">
-          <span className="material-symbols-outlined text-[16px]">photo_camera</span>
-          Cuelga tus fotos
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link href={`/salidas/${salida.id}/fotos/subir`} className="btn btn-ghost btn-sm">
+            <span className="material-symbols-outlined text-[16px]">add_a_photo</span>
+            Cuelga tus fotos
+          </Link>
+          <Link href={`/salidas/${salida.id}/fotos`} className="btn btn-ghost btn-sm">
+            <span className="material-symbols-outlined text-[16px]">photo_library</span>
+            Ver fotos
+          </Link>
+        </div>
 
         <div className="flex items-center justify-between border-t border-dashed border-steel/40 pt-3 mt-1">
           {sesionActiva ? (
