@@ -27,6 +27,14 @@ export interface Salida {
   fecha_creacion: Date;
 }
 
+export interface FotoSalida {
+  _id: ObjectId;
+  url: string;
+  usuario_id: ObjectId;
+  usuario_nombre: string;
+  fecha_subida: Date;
+}
+
 export interface Inscripcion {
   _id: ObjectId;
   salida_id: ObjectId;

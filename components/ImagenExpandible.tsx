@@ -8,17 +8,19 @@ export default function ImagenExpandible({
   src,
   alt = '',
   className,
+  sizes,
 }: {
   src: string;
   alt?: string;
   className?: string;
+  sizes?: string;
 }) {
   const [abierta, setAbierta] = useState(false);
 
   return (
     <>
       <button type="button" onClick={() => setAbierta(true)} className={className}>
-        <Image src={src} alt={alt} width={1200} height={1200} className="w-full h-full object-contain" />
+        <Image src={src} alt={alt} width={1200} height={1200} sizes={sizes} className="w-full h-full object-contain" />
       </button>
 
       {abierta &&

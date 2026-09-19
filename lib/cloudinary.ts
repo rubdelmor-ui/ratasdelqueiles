@@ -52,6 +52,40 @@ export async function uploadToCloudinary(
   }
 }
 
+/** Borra una imagen de Cloudinary a partir de su URL. No lanza si falla: la
+ * app ya la habrá dado de baja aunque quede huérfana en la nube. */
+export async function borrarImagenDeCloudinary(url: string): Promise<void> {
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+  const apiKey = process.env.CLOUDINARY_API_KEY;
+  const apiSecret = process.env.CLOUDINARY_API_SECRET;
+  if (!cloudName || !apiKey || !apiSecret) return;
+
+  const match = url.match(/\/image\/upload\/(?:v\d+\/)?(.+)\.[a-zA-Z0-9]+$/);
+  if (!match) return;
+  const publicId = decodeURIComponent(match[1]);
+
+  const timestamp = Math.floor(Date.now() / 1000);
+  const signature = crypto
+    .createHash('sha1')
+    .update(`public_id=${publicId}&timestamp=${timestamp}${apiSecret}`)
+    .digest('hex');
+
+  const form = new FormData();
+  form.append('public_id', publicId);
+  form.append('api_key', apiKey);
+  form.append('timestamp', String(timestamp));
+  form.append('signature', signature);
+
+  try {
+    await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/destroy`, {
+      method: 'POST',
+      body: form,
+    });
+  } catch (err) {
+    console.error('No se pudo borrar la imagen de Cloudinary:', err);
+  }
+}
+
 const EXTENSIONES_IMAGEN = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
 
 export function extensionPermitidaImagen(nombreArchivo: string): boolean {

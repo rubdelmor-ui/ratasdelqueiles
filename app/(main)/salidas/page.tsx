@@ -25,6 +25,11 @@ export default async function SalidasPage() {
         }
       />
 
+      <Link href="/salidas/fotos" className="btn btn-primary btn-block">
+        <span className="material-symbols-outlined text-[20px]">photo_camera</span>
+        Cuelga tus fotos
+      </Link>
+
       {salidas.length > 0 ? (
         <div className="flex flex-col gap-4 mt-1">
           {salidas.map((salida) => (
