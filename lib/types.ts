@@ -29,6 +29,7 @@ export interface Salida {
 
 export interface FotoSalida {
   _id: ObjectId;
+  salida_id: ObjectId;
   url: string;
   usuario_id: ObjectId;
   usuario_nombre: string;

@@ -115,6 +115,33 @@ export async function getSalidasConDatos(usuarioId?: string): Promise<SalidaConD
   });
 }
 
+export interface SalidaPasada {
+  id: string;
+  destino: string;
+  fechaSalida: string;
+  totalFotos: number;
+}
+
+/** Salidas ya celebradas (más recientes primero), para poder seguir viendo y
+ * subiendo sus fotos cuando ya no salen en "próximas". */
+export async function getSalidasPasadas(): Promise<SalidaPasada[]> {
+  const db = await getDb();
+  const hoy = new Date().toISOString().slice(0, 10);
+
+  const [salidas, conteos] = await Promise.all([
+    db.collection('salidas').find({ fecha_salida: { $lt: hoy } }).sort({ fecha_salida: -1 }).toArray(),
+    db.collection('fotos_salidas').aggregate([{ $group: { _id: '$salida_id', total: { $sum: 1 } } }]).toArray(),
+  ]);
+  const totales = new Map(conteos.map((c) => [String(c._id), c.total as number]));
+
+  return salidas.map((s) => ({
+    id: s._id.toString(),
+    destino: s.destino as string,
+    fechaSalida: s.fecha_salida as string,
+    totalFotos: totales.get(s._id.toString()) ?? 0,
+  }));
+}
+
 export async function getAsistentesParaExcel(salidaId: string) {
   const db = await getDb();
   const salida = await db.collection('salidas').findOne({ _id: new ObjectId(salidaId) });

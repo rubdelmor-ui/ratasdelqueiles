@@ -10,8 +10,17 @@ import {
 } from '@/lib/cloudinary';
 import { revalidatePath } from 'next/cache';
 
-export async function subirFoto(formData: FormData): Promise<{ error?: string }> {
+export async function subirFoto(salidaId: string, formData: FormData): Promise<{ error?: string }> {
   const session = await requireSession('/login');
+
+  if (!ObjectId.isValid(salidaId)) {
+    return { error: 'Salida no válida.' };
+  }
+  const db = await getDb();
+  const salida = await db.collection('salidas').findOne({ _id: new ObjectId(salidaId) }, { projection: { _id: 1 } });
+  if (!salida) {
+    return { error: 'La salida ya no existe.' };
+  }
 
   const foto = formData.get('foto') as File | null;
   if (!foto || foto.size === 0) {
@@ -26,20 +35,21 @@ export async function subirFoto(formData: FormData): Promise<{ error?: string }>
     return { error: error || 'Error al subir la foto.' };
   }
 
-  const db = await getDb();
   await db.collection('fotos_salidas').insertOne({
+    salida_id: salida._id,
     url,
     usuario_id: new ObjectId(session.id),
     usuario_nombre: session.nombre,
     fecha_subida: new Date(),
   });
 
-  revalidatePath('/salidas/fotos');
+  revalidatePath(`/salidas/${salidaId}/fotos`);
+  revalidatePath('/salidas');
   return {};
 }
 
 export async function borrarFoto(id: string) {
-  await requireSuperadmin('/salidas/fotos');
+  await requireSuperadmin('/salidas');
 
   const db = await getDb();
   const foto = await db.collection('fotos_salidas').findOne({ _id: new ObjectId(id) });
@@ -48,5 +58,6 @@ export async function borrarFoto(id: string) {
   await db.collection('fotos_salidas').deleteOne({ _id: foto._id });
   await borrarImagenDeCloudinary(foto.url as string);
 
-  revalidatePath('/salidas/fotos');
+  revalidatePath(`/salidas/${foto.salida_id}/fotos`);
+  revalidatePath('/salidas');
 }

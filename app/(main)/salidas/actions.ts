@@ -3,6 +3,7 @@
 import { ObjectId } from 'mongodb';
 import { getDb } from '@/lib/db';
 import { requireSession, requireSuperadmin } from '@/lib/session';
+import { borrarImagenDeCloudinary } from '@/lib/cloudinary';
 import { revalidatePath } from 'next/cache';
 
 /** Alterna la inscripción del socio actual a una salida (apuntarse.php). */
@@ -32,6 +33,10 @@ export async function borrarSalida(salidaId: string) {
     .find({ salida_id: new ObjectId(salidaId) })
     .toArray();
   const inscripcionIds = inscripciones.map((i) => i._id);
+
+  const fotos = await db.collection('fotos_salidas').find({ salida_id: new ObjectId(salidaId) }).toArray();
+  await Promise.all(fotos.map((f) => borrarImagenDeCloudinary(f.url as string)));
+  await db.collection('fotos_salidas').deleteMany({ salida_id: new ObjectId(salidaId) });
 
   await db.collection('acompanantes').deleteMany({ inscripcion_id: { $in: inscripcionIds } });
   await db.collection('inscripciones').deleteMany({ salida_id: new ObjectId(salidaId) });

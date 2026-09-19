@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { subirFoto } from '@/app/(main)/salidas/fotos/actions';
+import { subirFoto } from '@/app/(main)/salidas/[id]/fotos/actions';
 
 const MAX_LADO = 1600;
 // Vercel rechaza cuerpos de petición de más de ~4,5 MB.
@@ -43,7 +43,7 @@ async function comprimir(file: File): Promise<File> {
   }
 }
 
-export default function SubirFotos() {
+export default function SubirFotos({ salidaId }: { salidaId: string }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [progreso, setProgreso] = useState<{ hecho: number; total: number } | null>(null);
@@ -67,7 +67,7 @@ export default function SubirFotos() {
         try {
           const formData = new FormData();
           formData.append('foto', foto);
-          const res = await subirFoto(formData);
+          const res = await subirFoto(salidaId, formData);
           if (res.error) fallos.push(`${original.name}: ${res.error}`);
         } catch {
           fallos.push(`${original.name}: no se pudo subir.`);

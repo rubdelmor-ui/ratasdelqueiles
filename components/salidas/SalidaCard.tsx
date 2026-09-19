@@ -83,6 +83,11 @@ export default function SalidaCard({
           />
         </div>
 
+        <Link href={`/salidas/${salida.id}/fotos`} className="btn btn-ghost btn-sm self-start">
+          <span className="material-symbols-outlined text-[16px]">photo_camera</span>
+          Cuelga tus fotos
+        </Link>
+
         <div className="flex items-center justify-between border-t border-dashed border-steel/40 pt-3 mt-1">
           {sesionActiva ? (
             salida.yaApuntado ? (
@@ -108,7 +113,7 @@ export default function SalidaCard({
               </Link>
               <form action={borrar}>
                 <ConfirmSubmitButton
-                  confirmMessage="¿Seguro que quieres borrar esta salida?"
+                  confirmMessage="¿Seguro que quieres borrar esta salida? Se borrarán también sus fotos."
                   className="text-smoke hover:text-ember"
                 >
                   <span className="material-symbols-outlined text-[19px]">delete</span>

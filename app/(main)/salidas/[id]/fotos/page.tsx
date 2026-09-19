@@ -1,4 +1,6 @@
 import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import { ObjectId } from 'mongodb';
 import { getDb } from '@/lib/db';
 import { requireSession, esSuperadmin } from '@/lib/session';
 import type { FotoSalida } from '@/lib/types';
@@ -8,23 +10,29 @@ import ConfirmSubmitButton from '@/components/ConfirmSubmitButton';
 import SubirFotos from '@/components/salidas/SubirFotos';
 import { borrarFoto } from './actions';
 
-export default async function FotosSalidasPage() {
+export default async function FotosSalidaPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await requireSession('/login');
   const superadmin = esSuperadmin(session);
+  const { id } = await params;
+
+  if (!ObjectId.isValid(id)) notFound();
 
   const db = await getDb();
+  const salida = await db.collection('salidas').findOne({ _id: new ObjectId(id) });
+  if (!salida) notFound();
+
   const fotos = await db
     .collection<FotoSalida>('fotos_salidas')
-    .find({})
+    .find({ salida_id: salida._id })
     .sort({ fecha_subida: -1 })
     .toArray();
 
   return (
     <div className="flex flex-col gap-5">
       <PageHeader
-        eyebrow="Galería"
-        title="Fotos de las salidas"
-        subtitle="Cuelga tus fotos de las rutas para que las vea todo el club."
+        eyebrow="Fotos de la salida"
+        title={salida.destino}
+        subtitle="Cuelga tus fotos de esta salida para que las vea todo el club."
         action={
           <Link href="/salidas" className="text-smoke hover:text-rust">
             <span className="material-symbols-outlined">close</span>
@@ -32,19 +40,19 @@ export default async function FotosSalidasPage() {
         }
       />
 
-      <SubirFotos />
+      <SubirFotos salidaId={id} />
 
       {fotos.length === 0 ? (
         <div className="cut-panel bg-surface border border-steel/50 p-10 text-center">
           <span className="material-symbols-outlined text-6xl text-ash">photo_library</span>
-          <p className="text-smoke mt-3">Todavía no hay fotos. ¡Sé el primero en subir una!</p>
+          <p className="text-smoke mt-3">Todavía no hay fotos de esta salida. ¡Sé el primero en subir una!</p>
         </div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           {fotos.map((foto) => {
-            const id = foto._id.toString();
+            const fotoId = foto._id.toString();
             return (
-              <div key={id} className="rounded-lg border border-steel/50 bg-surface overflow-hidden">
+              <div key={fotoId} className="rounded-lg border border-steel/50 bg-surface overflow-hidden">
                 <ImagenExpandible
                   src={foto.url}
                   alt={`Foto de ${foto.usuario_nombre}`}
@@ -59,7 +67,7 @@ export default async function FotosSalidasPage() {
                     </div>
                   </div>
                   {superadmin && (
-                    <form action={borrarFoto.bind(null, id)}>
+                    <form action={borrarFoto.bind(null, fotoId)}>
                       <ConfirmSubmitButton
                         confirmMessage="¿Eliminar esta foto?"
                         className="text-smoke hover:text-ember flex-shrink-0"
