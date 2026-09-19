@@ -25,7 +25,7 @@ export default async function Home() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--color-rust)_0%,_transparent_60%)] opacity-[0.12]" />
         <div className="relative">
           <span className="skew-chip bg-hazard mx-auto mb-6">
-            <span className="skew-chip-inner text-asphalt-low text-[11px] px-3 py-1">Club de moteros</span>
+            <span className="skew-chip-inner text-asphalt-low text-[11px] px-3 py-1">Asociación motera</span>
           </span>
 
           <div className="w-28 h-28 mx-auto mb-5 rounded-full border-[3px] border-rust p-1 shadow-[0_0_0_4px_rgba(0,0,0,0.5),0_0_40px_-8px_var(--color-rust)]">
